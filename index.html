@@ -190,46 +190,25 @@
         <!-- PRICING -->
         <section id="pricing" class="pricing-section bg-white">
             <div class="container fade-up">
-                <h2 data-i18n>Transparent Pricing</h2>
-                <p class="section-subtitle" data-i18n>No hidden fees. No surprises.</p>
-                <div class="pricing-grid">
+                <h2 data-i18n>Simple Pricing</h2>
+                <p class="section-subtitle" data-i18n>CHF 800 per page. 1 year of support included.</p>
+                <div class="pricing-grid pricing-single">
                     <div class="pricing-card">
-                        <h3 data-i18n>One-Pager</h3>
-                        <p class="price">CHF 800</p>
+                        <h3 data-i18n>Your Website</h3>
+                        <p class="price">CHF 800 <span data-i18n>per page</span></p>
                         <ul class="pricing-features">
-                            <li data-i18n>Single-page website</li>
-                            <li data-i18n>Responsive design</li>
-                            <li data-i18n>Contact form</li>
-                            <li data-i18n>SEO basics</li>
-                            <li data-i18n>1 revision round</li>
-                        </ul>
-                    </div>
-                    <div class="pricing-card popular">
-                        <div class="badge" data-i18n>Most Popular</div>
-                        <h3 data-i18n>Business Site</h3>
-                        <p class="price">CHF 2'000</p>
-                        <ul class="pricing-features">
-                            <li data-i18n>Up to 5 pages</li>
-                            <li data-i18n>Custom design</li>
+                            <li data-i18n>Custom design from scratch</li>
+                            <li data-i18n>Responsive — looks great everywhere</li>
                             <li data-i18n>Multilingual (DE/EN)</li>
-                            <li data-i18n>Contact form & map</li>
-                            <li data-i18n>Full SEO setup</li>
-                            <li data-i18n>2 revision rounds</li>
-                            <li data-i18n>30-day support</li>
+                            <li data-i18n>SEO optimized</li>
+                            <li data-i18n>Contact form</li>
+                            <li data-i18n>1 year of support included</li>
                         </ul>
                     </div>
-                    <div class="pricing-card">
-                        <h3 data-i18n>Premium Project</h3>
-                        <p class="price" data-i18n>On Request</p>
-                        <ul class="pricing-features">
-                            <li data-i18n>Unlimited pages</li>
-                            <li data-i18n>Advanced features</li>
-                            <li data-i18n>Animations & interactions</li>
-                            <li data-i18n>CMS integration</li>
-                            <li data-i18n>Priority support</li>
-                            <li data-i18n>Maintenance package</li>
-                        </ul>
-                    </div>
+                </div>
+                <div class="invite-notice">
+                    <p data-i18n>NucciDesign is available by invitation only. Have an invite code?</p>
+                    <p data-i18n>No invite? Reach out at <a href="mailto:start@nuccidesign.ch">start@nuccidesign.ch</a></p>
                 </div>
             </div>
         </section>
@@ -251,11 +230,13 @@
                         </div>
                     </div>
                     <div class="form-group">
+                        <label for="invite-code" data-i18n>Invitation Code</label>
+                        <input type="text" id="invite-code" name="invite-code" placeholder="XXXX-XXXX">
+                    </div>
+                    <div class="form-group">
                         <label for="project-type" data-i18n>Project Type</label>
                         <select id="project-type" name="project-type" required>
-                            <option value="One-Pager" data-i18n>One-Pager</option>
-                            <option value="Business Site" data-i18n>Business Site</option>
-                            <option value="Premium Project" data-i18n>Premium Project</option>
+                            <option value="New Website" data-i18n>New Website</option>
                             <option value="Redesign" data-i18n>Redesign</option>
                             <option value="Other" data-i18n>Other</option>
                         </select>

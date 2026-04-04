@@ -56,31 +56,15 @@ const translations = {
         "Need changes? New pages? A refresh? We're here to help your site evolve with your business.": "Änderungen nötig? Neue Seiten? Ein Refresh? Wir helfen deiner Website, mit deinem Unternehmen mitzuwachsen.",
         "Our Stack": "Unser Stack",
         "Clean technology. No bloated frameworks.": "Saubere Technologie. Keine aufgeblähten Frameworks.",
-        "Transparent Pricing": "Transparente Preise",
-        "No hidden fees. No surprises.": "Keine versteckten Kosten. Keine Überraschungen.",
-        "One-Pager": "One-Pager",
-        "Single-page website": "Einseitige Website",
-        "Responsive design": "Responsive Design",
-        "Contact form": "Kontaktformular",
-        "SEO basics": "SEO-Grundlagen",
-        "1 revision round": "1 Korrekturschleife",
-        "Most Popular": "Beliebteste Wahl",
-        "Business Site": "Business Website",
-        "Up to 5 pages": "Bis zu 5 Seiten",
-        "Custom design": "Individuelles Design",
-        "Multilingual (DE/EN)": "Mehrsprachig (DE/EN)",
-        "Contact form & map": "Kontaktformular & Karte",
-        "Full SEO setup": "Volles SEO-Setup",
-        "2 revision rounds": "2 Korrekturschleifen",
-        "30-day support": "30 Tage Support",
-        "Premium Project": "Premium Projekt",
-        "On Request": "Auf Anfrage",
-        "Unlimited pages": "Unbegrenzte Seiten",
-        "Advanced features": "Erweiterte Features",
-        "Animations & interactions": "Animationen & Interaktionen",
-        "CMS integration": "CMS-Integration",
-        "Priority support": "Prioritäts-Support",
-        "Maintenance package": "Wartungspaket",
+        "Simple Pricing": "Einfache Preise",
+        "CHF 800 per page. 1 year of support included.": "CHF 800 pro Seite. 1 Jahr Support inklusive.",
+        "Your Website": "Deine Website",
+        "per page": "pro Seite",
+        "Custom design from scratch": "Individuelles Design von Grund auf",
+        "Responsive — looks great everywhere": "Responsive — sieht überall super aus",
+        "1 year of support included": "1 Jahr Support inklusive",
+        "NucciDesign is available by invitation only. Have an invite code?": "NucciDesign ist nur mit Einladung verfügbar. Hast du einen Einladungscode?",
+        "No invite? Reach out at <a href=\"mailto:start@nuccidesign.ch\">start@nuccidesign.ch</a>": "Keine Einladung? Melde dich bei <a href=\"mailto:start@nuccidesign.ch\">start@nuccidesign.ch</a>",
         "Let's Build Something Great.": "Lass uns etwas Grossartiges bauen.",
         "Tell us about your project — we'll get back to you within 24 hours.": "Erzähl uns von deinem Projekt — wir melden uns innerhalb von 24 Stunden.",
         "Name": "Name",
@@ -88,6 +72,8 @@ const translations = {
         "Project Type": "Projekttyp",
         "Tell us about your project": "Erzähl uns von deinem Projekt",
         "Send Request": "Anfrage senden",
+        "Invitation Code": "Einladungscode",
+        "New Website": "Neue Website",
         "Redesign": "Redesign",
         "Other": "Anderes",
         "Thank you — we'll get back to you within 24 hours.": "Vielen Dank — wir melden uns innerhalb von 24 Stunden."
@@ -188,7 +174,7 @@ if (form) {
                 formSuccess.style.display = 'block';
             }
         } catch (err) {
-            window.location.href = 'mailto:hello@nuccidesign.ch';
+            window.location.href = 'mailto:start@nuccidesign.ch';
         }
     });
 }
