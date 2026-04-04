@@ -64,7 +64,7 @@ const translations = {
         "Responsive — looks great everywhere": "Responsive — sieht überall super aus",
         "1 year of support included": "1 Jahr Support inklusive",
         "NucciDesign is available by invitation only. Have an invite code?": "NucciDesign ist nur mit Einladung verfügbar. Hast du einen Einladungscode?",
-        "No invite? Reach out at <a href=\"mailto:start@nuccidesign.ch\">start@nuccidesign.ch</a>": "Keine Einladung? Melde dich bei <a href=\"mailto:start@nuccidesign.ch\">start@nuccidesign.ch</a>",
+        "No invite? Reach out at <a href=\"mailto:hello@nuccidesign.ch\">hello@nuccidesign.ch</a>": "Keine Einladung? Melde dich bei <a href=\"mailto:hello@nuccidesign.ch\">hello@nuccidesign.ch</a>",
         "Let's Build Something Great.": "Lass uns etwas Grossartiges bauen.",
         "Tell us about your project — we'll get back to you within 24 hours.": "Erzähl uns von deinem Projekt — wir melden uns innerhalb von 24 Stunden.",
         "Name": "Name",
@@ -76,7 +76,20 @@ const translations = {
         "New Website": "Neue Website",
         "Redesign": "Redesign",
         "Other": "Anderes",
-        "Thank you — we'll get back to you within 24 hours.": "Vielen Dank — wir melden uns innerhalb von 24 Stunden."
+        "Thank you — we'll get back to you within 24 hours.": "Vielen Dank — wir melden uns innerhalb von 24 Stunden.",
+        "Frequently Asked Questions": "Häufig gestellte Fragen",
+        "How does NucciDesign work?": "Wie funktioniert NucciDesign?",
+        "We build custom websites from scratch using clean HTML, CSS, and JavaScript. No templates, no bloated frameworks. You tell us what you need, we design and build it, then launch. Simple as that.": "Wir bauen individuelle Websites von Grund auf mit sauberem HTML, CSS und JavaScript. Keine Templates, keine aufgeblähten Frameworks. Du sagst uns, was du brauchst, wir designen und bauen es, dann geht es online. So einfach ist das.",
+        "Why invitation only?": "Warum nur mit Einladung?",
+        "We work exclusively with people we trust — friends, referrals, and their networks. This allows us to give every project the attention and personal touch it deserves. Quality over quantity.": "Wir arbeiten ausschliesslich mit Leuten, denen wir vertrauen — Freunden, Empfehlungen und deren Netzwerken. So können wir jedem Projekt die Aufmerksamkeit und persönliche Note geben, die es verdient. Qualität vor Quantität.",
+        "What does CHF 800 per page include?": "Was ist bei CHF 800 pro Seite inklusive?",
+        "Every page is custom-designed, responsive, multilingual (DE/EN), and SEO-optimized. You also get 1 full year of support — updates, fixes, and small changes included.": "Jede Seite wird individuell gestaltet, ist responsive, mehrsprachig (DE/EN) und SEO-optimiert. Dazu erhältst du 1 Jahr Support — Updates, Fixes und kleine Änderungen inklusive.",
+        "How long does a project take?": "Wie lange dauert ein Projekt?",
+        "Most projects are completed within 1–3 weeks, depending on scope and feedback cycles. We keep you in the loop at every stage.": "Die meisten Projekte sind innerhalb von 1–3 Wochen fertig, abhängig vom Umfang und Feedback-Schleifen. Wir halten dich in jeder Phase auf dem Laufenden.",
+        "What happens after the first year?": "Was passiert nach dem ersten Jahr?",
+        "After the first year of included support, you can continue with a flexible maintenance arrangement. Or take your site and run it yourself — it's yours.": "Nach dem ersten Jahr inklusive Support kannst du mit einem flexiblen Wartungsarrangement weitermachen. Oder du nimmst deine Website und betreibst sie selbst — sie gehört dir.",
+        "I don't have an invite code. Can I still get a website?": "Ich habe keinen Einladungscode. Kann ich trotzdem eine Website bekommen?",
+        "We onboard new clients selectively through trusted referrals. Reach out at hello@nuccidesign.ch and tell us about your project. If it's a fit, we'll find a way.": "Wir nehmen neue Kunden selektiv über vertrauenswürdige Empfehlungen auf. Melde dich bei hello@nuccidesign.ch und erzähl uns von deinem Projekt. Wenn es passt, finden wir einen Weg."
     }
 };
 
@@ -174,7 +187,18 @@ if (form) {
                 formSuccess.style.display = 'block';
             }
         } catch (err) {
-            window.location.href = 'mailto:start@nuccidesign.ch';
+            window.location.href = 'mailto:hello@nuccidesign.ch';
         }
     });
 }
+
+// --- FAQ ACCORDION ---
+document.querySelectorAll('.faq-question').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const expanded = btn.getAttribute('aria-expanded') === 'true';
+        // Close all
+        document.querySelectorAll('.faq-question').forEach(b => b.setAttribute('aria-expanded', 'false'));
+        // Toggle current
+        if (!expanded) btn.setAttribute('aria-expanded', 'true');
+    });
+});
