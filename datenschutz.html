@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Datenschutz | NucciDesign</title>
+    <meta name="robots" content="noindex">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="main-nav">
+        <div class="nav-content">
+            <a href="index.html" class="nav-logo"><span class="brand-text">NucciDesign</span></a>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
+                    <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                    <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                </button></li>
+            </ul>
+        </div>
+    </nav>
+    <main>
+        <section class="legal-section">
+            <div class="container fade-up">
+                <h1>Datenschutzerklärung</h1>
+                <div class="legal-content">
+                    <h2>1. Datenschutz</h2>
+                    <p>NucciDesign (Emanuel Malacarne) nimmt den Schutz Ihrer persönlichen Daten sehr ernst. Wir behandeln Ihre personenbezogenen Daten vertraulich und gemäss der schweizerischen Datenschutzgesetzgebung (DSG).</p>
+                    <h2>2. Datenerfassung</h2>
+                    <p>Diese Website erfasst keine personenbezogenen Daten automatisch. Wenn Sie uns über das Kontaktformular eine Nachricht senden, werden die von Ihnen angegebenen Daten (Name, E-Mail, Nachricht) zwecks Bearbeitung Ihrer Anfrage gespeichert.</p>
+                    <h2>3. Cookies</h2>
+                    <p>Diese Website verwendet lediglich localStorage zur Speicherung von Spracheinstellungen und Theme-Präferenzen. Es werden keine Tracking-Cookies oder Analyse-Tools von Drittanbietern eingesetzt.</p>
+                    <h2>4. Kontakt</h2>
+                    <p>Fragen zum Datenschutz: <a href="mailto:hello@nuccidesign.ch">hello@nuccidesign.ch</a></p>
+                </div>
+            </div>
+        </section>
+    </main>
+    <footer class="main-footer">
+        <div class="container">
+            <div class="footer-bottom">
+                <p class="brand-text">NucciDesign</p>
+                <p class="copyright">&copy; <span id="year"></span> NucciDesign by Emanuel Malacarne. All rights reserved. · <a href="impressum.html" class="footer-legal">Impressum</a> · <a href="datenschutz.html" class="footer-legal">Datenschutz</a></p>
+            </div>
+        </div>
+    </footer>
+    <script>
+        document.getElementById('year').textContent = new Date().getFullYear();
+        const toggle = document.getElementById('themeToggle');
+        const html = document.documentElement;
+        function setTheme(t) { html.setAttribute('data-theme', t); localStorage.setItem('theme', t); }
+        const s = localStorage.getItem('theme');
+        if (s) setTheme(s); else if (window.matchMedia('(prefers-color-scheme: dark)').matches) setTheme('dark');
+        toggle.addEventListener('click', () => setTheme(html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'));
+    </script>
+</body>
+</html>
