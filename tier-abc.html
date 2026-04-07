@@ -217,19 +217,152 @@
       o.connect(g); g.connect(audioCtx.destination);
       o.start(); o.stop(audioCtx.currentTime + dur);
     }
+    // Helper: noise buffer
+    function noiseBuf(dur, type = 'white') {
+      const len = audioCtx.sampleRate * dur;
+      const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      if (type === 'pink') { let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0; for(let i=0;i<len;i++){const w=Math.random()*2-1;b0=0.99886*b0+w*0.0555179;b1=0.99332*b1+w*0.0750759;b2=0.96900*b2+w*0.1538520;b3=0.86650*b3+w*0.3104856;b4=0.55000*b4+w*0.5329522;b5=-0.7616*b5-w*0.0168980;d[i]=(b0+b1+b2+b3+b4+b5+b6+w*0.5362)*0.11;b6=w*0.115926;} }
+      return buf;
+    }
+    function playBuf(buf, vol = 0.3, filter = null, filterFreq = 2000, filterQ = 1) {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const src = audioCtx.createBufferSource(); src.buffer = buf;
+      const g = audioCtx.createGain(); g.gain.value = vol;
+      if (filter) { const f = audioCtx.createBiquadFilter(); f.type = filter; f.frequency.value = filterFreq; f.Q.value = filterQ; src.connect(f); f.connect(g); g.connect(audioCtx.destination); }
+      else { src.connect(g); g.connect(audioCtx.destination); }
+      src.start();
+    }
+    function playOsc(type, freq, dur, vol = 0.15, freqEnd = null) {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = type; o.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      if (freqEnd) o.frequency.exponentialRampToValueAtTime(freqEnd, audioCtx.currentTime + dur);
+      g.gain.setValueAtTime(vol, audioCtx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+      o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + dur);
+    }
+
     function playAnimalSound(letter) {
-      const sounds = {
-        'A': [440, 0.2], 'B': [330, 0.25], 'C': [523, 0.2], 'D': [392, 0.2],
-        'E': [349, 0.25], 'F': [466, 0.2], 'G': [294, 0.3], 'H': [523, 0.15],
-        'I': [440, 0.2], 'J': [370, 0.2], 'K': [494, 0.2], 'L': [330, 0.25],
-        'M': [262, 0.3], 'N': [392, 0.2], 'O': [440, 0.2], 'P': [523, 0.15],
-        'Q': [349, 0.25], 'R': [294, 0.2], 'S': [587, 0.15], 'T': [330, 0.2],
-        'U': [262, 0.25], 'V': [466, 0.2], 'W': [392, 0.2], 'X': [523, 0.1],
-        'Y': [440, 0.2], 'Z': [262, 0.3], 'Ä': [466, 0.2], 'Ö': [349, 0.25],
-        'Ü': [523, 0.2], 'ß': [330, 0.25]
-      };
-      const s = sounds[letter];
-      if (s) playNote(s[0], s[1]);
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const t = audioCtx.currentTime;
+      switch(letter) {
+        case 'A': // Affe — screech
+          playOsc('sawtooth', 800, 0.3, 0.12, 2200);
+          setTimeout(() => playOsc('sawtooth', 900, 0.2, 0.1, 2000), 150);
+          break;
+        case 'B': // Bär — low growl
+          playBuf(noiseBuf(0.6, 'pink'), 0.4, 'lowpass', 200, 2);
+          playOsc('sawtooth', 80, 0.5, 0.2, 50);
+          break;
+        case 'C': // Chamäleon — tongue snap
+          playBuf(noiseBuf(0.05), 0.5, 'highpass', 4000);
+          break;
+        case 'D': // Delfin — click/whistle
+          for (let i = 0; i < 3; i++) setTimeout(() => playBuf(noiseBuf(0.03), 0.3, 'bandpass', 8000, 5), i * 80);
+          setTimeout(() => playOsc('sine', 1200, 0.3, 0.1, 1800), 250);
+          break;
+        case 'E': // Elefant — trumpet
+          playOsc('sawtooth', 200, 0.6, 0.15, 400);
+          playBuf(noiseBuf(0.5, 'pink'), 0.2, 'bandpass', 500, 3);
+          break;
+        case 'F': // Fuchs — yap
+          playOsc('square', 600, 0.15, 0.08, 1200);
+          setTimeout(() => playOsc('square', 700, 0.12, 0.06, 1400), 200);
+          break;
+        case 'G': // Giraffe — hum
+          playOsc('sine', 120, 0.8, 0.12);
+          playOsc('sine', 125, 0.8, 0.1);
+          break;
+        case 'H': // Hai — underwater rumble
+          playBuf(noiseBuf(0.5, 'pink'), 0.3, 'lowpass', 150, 3);
+          break;
+        case 'I': // Igel — snuffle
+          playBuf(noiseBuf(0.2), 0.15, 'bandpass', 2000, 5);
+          setTimeout(() => playBuf(noiseBuf(0.15), 0.12, 'bandpass', 2000, 5), 250);
+          break;
+        case 'J': // Jaguar — roar
+          playOsc('sawtooth', 150, 0.5, 0.15, 300);
+          playBuf(noiseBuf(0.4, 'pink'), 0.25, 'lowpass', 400, 2);
+          break;
+        case 'K': // Koala — grunt
+          playOsc('sawtooth', 200, 0.2, 0.1, 100);
+          setTimeout(() => playOsc('sawtooth', 180, 0.15, 0.08, 90), 250);
+          break;
+        case 'L': // Löiw — roar
+          playOsc('sawtooth', 120, 0.8, 0.2, 250);
+          playBuf(noiseBuf(0.6, 'pink'), 0.3, 'lowpass', 300, 2);
+          setTimeout(() => playOsc('sawtooth', 100, 0.5, 0.15, 200), 400);
+          break;
+        case 'M': // Mauwurf — scratch
+          playBuf(noiseBuf(0.1), 0.1, 'highpass', 5000);
+          setTimeout(() => playBuf(noiseBuf(0.08), 0.08, 'highpass', 5000), 150);
+          setTimeout(() => playBuf(noiseBuf(0.06), 0.06, 'highpass', 5000), 300);
+          break;
+        case 'N': // Nashorn — snort
+          playBuf(noiseBuf(0.3, 'pink'), 0.35, 'bandpass', 600, 3);
+          playOsc('sine', 100, 0.3, 0.15, 60);
+          break;
+        case 'O': // Otter — chirp
+          playOsc('sine', 1500, 0.1, 0.1, 2000);
+          setTimeout(() => playOsc('sine', 1600, 0.1, 0.08, 2200), 120);
+          setTimeout(() => playOsc('sine', 1700, 0.08, 0.06, 2400), 240);
+          break;
+        case 'P': // Pinguin — bray
+          playOsc('sawtooth', 400, 0.15, 0.1, 800);
+          setTimeout(() => playOsc('sawtooth', 500, 0.12, 0.08, 1000), 180);
+          break;
+        case 'Q': // Qualle — blip
+          playOsc('sine', 300, 0.4, 0.08, 600);
+          playOsc('sine', 305, 0.4, 0.06, 610);
+          break;
+        case 'R': // Rentier — grunt
+          playOsc('sawtooth', 180, 0.15, 0.1, 120);
+          break;
+        case 'S': // Schmetterling — flutter
+          for (let i = 0; i < 6; i++) setTimeout(() => playBuf(noiseBuf(0.03), 0.04, 'highpass', 8000), i * 60);
+          break;
+        case 'T': // Tiger — growl
+          playOsc('sawtooth', 100, 0.6, 0.18, 200);
+          playBuf(noiseBuf(0.5, 'pink'), 0.2, 'lowpass', 250, 2);
+          break;
+        case 'U': // Uhu — hoot
+          playOsc('sine', 350, 0.3, 0.12, 300);
+          setTimeout(() => playOsc('sine', 300, 0.4, 0.1, 280), 350);
+          break;
+        case 'V': // Viper — hiss
+          playBuf(noiseBuf(0.5), 0.2, 'bandpass', 5000, 8);
+          playBuf(noiseBuf(0.5), 0.15, 'highpass', 6000);
+          break;
+        case 'W': // Wal — deep moan
+          playOsc('sine', 60, 1.2, 0.2, 40);
+          playOsc('sine', 62, 1.2, 0.15, 42);
+          break;
+        case 'X': // X-Ray Fisch — bubble
+          for (let i = 0; i < 4; i++) setTimeout(() => playOsc('sine', 400 + i * 200, 0.1, 0.08, 600 + i * 200), i * 100);
+          break;
+        case 'Y': // Yak — grunt
+          playOsc('sawtooth', 150, 0.3, 0.15, 80);
+          playBuf(noiseBuf(0.3, 'pink'), 0.2, 'lowpass', 300, 3);
+          break;
+        case 'Z': // Zebra — bray
+          playOsc('sawtooth', 500, 0.1, 0.1, 900);
+          setTimeout(() => playOsc('square', 300, 0.3, 0.08, 600), 120);
+          break;
+        case 'Ä': // Äskulapnatter — hiss (softer)
+          playBuf(noiseBuf(0.3), 0.12, 'bandpass', 4000, 6);
+          break;
+        case 'Ö': // Ölkönig — click
+          playBuf(noiseBuf(0.02), 0.3, 'bandpass', 10000, 10);
+          setTimeout(() => playBuf(noiseBuf(0.02), 0.25, 'bandpass', 10000, 10), 60);
+          break;
+        case 'Ü': // Waschbär — chitter
+          for (let i = 0; i < 5; i++) setTimeout(() => playOsc('square', 800 + i * 100, 0.06, 0.06, 1000 + i * 100), i * 70);
+          break;
+        default:
+          playOsc('triangle', 440, 0.2, 0.1);
+      }
     }
 
     // Animals data
