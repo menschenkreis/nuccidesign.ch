@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Flappy Hammer — NucciDesigner</title>
+  <title>Flappy Einhorn — NucciDesigner</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap');
 
@@ -26,8 +26,7 @@
     .overlay.hidden { opacity: 0; pointer-events: none; }
 
     .title { font-size: clamp(2rem, 8vw, 3.5rem); font-weight: 900; letter-spacing: -0.04em; text-align: center; margin-bottom: 8px; }
-    .title .hammer { font-size: 1.1em; }
-    .subtitle { color: rgba(255,255,255,0.5); font-size: 0.85rem; text-align: center; margin-bottom: 32px; }
+    .subtitle { color: rgba(255,255,255,0.5); font-size: 0.85rem; text-align: center; margin-bottom: 24px; }
 
     .score-display { font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; color: rgba(255,255,255,0.5); margin-bottom: 8px; }
     .score-display span { color: #c44dff; font-weight: 700; font-size: 1.2rem; }
@@ -40,6 +39,15 @@
     }
     .play-btn:hover { transform: scale(1.05); box-shadow: 0 8px 30px rgba(196,77,255,0.4); }
     .play-btn:active { transform: scale(0.95); }
+
+    .diff-row { display: flex; gap: 8px; margin-bottom: 24px; }
+    .diff-btn {
+      padding: 8px 18px; border-radius: 100px; border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.5); font-size: 0.78rem; font-weight: 700;
+      font-family: 'Inter', sans-serif; cursor: pointer; transition: all 0.2s;
+    }
+    .diff-btn:hover { border-color: #c44dff; color: #c44dff; }
+    .diff-btn.active { background: #c44dff; color: white; border-color: #c44dff; }
 
     .instructions { color: rgba(255,255,255,0.4); font-size: 0.72rem; margin-top: 20px; text-align: center; line-height: 1.6; }
 
@@ -68,11 +76,16 @@
 
   <!-- Start -->
   <div class="overlay" id="startScreen">
-    <div class="title"><span class="hammer">🔨</span> Flappy<br>Hammer</div>
-    <div class="subtitle">Dä AI-Hämmer bruucht din Hilf!</div>
+    <div class="title">🦄 Flappy<br>Einhorn</div>
+    <div class="subtitle">S Einhorn bruucht din Hilf zum fliege!</div>
     <div class="score-display">Best: <span id="bestScore">0</span></div>
+    <div class="diff-row">
+      <button class="diff-btn" data-diff="easy">🟢 Leicht</button>
+      <button class="diff-btn active" data-diff="normal">🟡 Normal</button>
+      <button class="diff-btn" data-diff="hard">🔴 Schwer</button>
+    </div>
     <button class="play-btn" id="playBtn">Los!</button>
-    <div class="instructions">Tippe oder klick zum fliege<br>Dä Hämmer muess d Lücke finde!</div>
+    <div class="instructions">Tippe oder klick zum fliege<br>S Einhorn muess d Lücke finde!</div>
   </div>
 
   <!-- Game Over -->
@@ -97,59 +110,58 @@
       g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
       o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + dur);
     }
-    function sndFlap() { beep(400, 0.1, 0.08); setTimeout(() => beep(600, 0.08, 0.06), 50); }
+    function sndFlap() { beep(600, 0.1, 0.06); setTimeout(() => beep(900, 0.08, 0.04), 40); }
     function sndScore() { beep(523, 0.1, 0.08); setTimeout(() => beep(659, 0.1, 0.08), 80); setTimeout(() => beep(784, 0.15, 0.06), 160); }
     function sndHit() { beep(150, 0.3, 0.15, 'sawtooth'); }
 
     // Resize
     let W, H;
-    function resize() {
-      W = canvas.width = window.innerWidth;
-      H = canvas.height = window.innerHeight;
-    }
+    function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
     resize();
     window.addEventListener('resize', resize);
 
-    // Game state
-    const GRAVITY = 0.45;
-    const FLAP = -7.5;
+    // Difficulty presets
+    const DIFFS = {
+      easy:   { gravity: 0.28, flap: -6,  gap: 200, speed: 2,   interval: 120 },
+      normal: { gravity: 0.42, flap: -7.5, gap: 155, speed: 2.5, interval: 100 },
+      hard:   { gravity: 0.55, flap: -8.5, gap: 115, speed: 3.5, interval: 80  },
+    };
+    let diff = 'normal';
+    document.querySelectorAll('.diff-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        diff = btn.dataset.diff;
+      });
+    });
+
     const PIPE_W = 60;
-    const GAP = 160;
-    const PIPE_SPEED = 2.5;
-    const PIPE_INTERVAL = 100; // frames
+    let uni, pipes, score, bestScore, frame, gameRunning, gameStarted;
+    let particles = [], stars = [];
 
-    let hammer, pipes, score, bestScore, frame, gameRunning, gameStarted;
-    let particles = [];
-    let stars = [];
-
-    bestScore = parseInt(localStorage.getItem('flappyHammerBest') || '0');
+    bestScore = parseInt(localStorage.getItem('flappyUnicornBest') || '0');
     document.getElementById('bestScore').textContent = bestScore;
 
-    // Stars
     for (let i = 0; i < 60; i++) {
       stars.push({ x: Math.random() * 2000, y: Math.random() * 2000, r: Math.random() * 1.5 + 0.5, a: Math.random() });
     }
 
     function init() {
-      hammer = { x: W * 0.3, y: H * 0.45, vy: 0, angle: 0, w: 40, h: 40 };
-      pipes = [];
-      score = 0;
-      frame = 0;
-      particles = [];
-      gameStarted = false;
+      uni = { x: W * 0.3, y: H * 0.45, vy: 0, angle: 0 };
+      pipes = []; score = 0; frame = 0; particles = []; gameStarted = false;
     }
 
     function flap() {
       if (!gameRunning) return;
       if (!gameStarted) gameStarted = true;
-      hammer.vy = FLAP;
-      hammer.angle = -0.4;
+      uni.vy = DIFFS[diff].flap;
+      uni.angle = -0.4;
       sndFlap();
     }
 
     function spawnPipe() {
-      const minTop = 80;
-      const maxTop = H - GAP - 80;
+      const d = DIFFS[diff];
+      const minTop = 80, maxTop = H - d.gap - 80;
       const topH = Math.random() * (maxTop - minTop) + minTop;
       pipes.push({ x: W + 20, top: topH, scored: false });
     }
@@ -163,58 +175,94 @@
       }
     }
 
-    function drawHammer() {
+    function drawUnicorn() {
       ctx.save();
-      ctx.translate(hammer.x, hammer.y);
-      ctx.rotate(hammer.angle);
+      ctx.translate(uni.x, uni.y);
+      ctx.rotate(uni.angle);
 
-      // Handle
-      ctx.fillStyle = '#8B6914';
-      ctx.fillRect(-3, -4, 6, 24);
-      ctx.fillStyle = '#A0781A';
-      ctx.fillRect(-2, -3, 4, 22);
+      // Body
+      ctx.fillStyle = '#f0e0ff';
+      ctx.beginPath(); ctx.ellipse(0, 0, 16, 12, 0, 0, Math.PI * 2); ctx.fill();
 
       // Head
-      ctx.fillStyle = '#888';
-      ctx.fillRect(-14, -20, 28, 18);
-      ctx.fillStyle = '#999';
-      ctx.fillRect(-13, -19, 26, 16);
+      ctx.fillStyle = '#f5eaff';
+      ctx.beginPath(); ctx.ellipse(10, -6, 10, 9, 0.3, 0, Math.PI * 2); ctx.fill();
 
-      // Shine
-      ctx.fillStyle = 'rgba(255,255,255,0.15)';
-      ctx.fillRect(-12, -18, 12, 14);
+      // Ear
+      ctx.fillStyle = '#e8d0ff';
+      ctx.beginPath(); ctx.moveTo(14, -14); ctx.lineTo(18, -24); ctx.lineTo(12, -16); ctx.fill();
+      ctx.fillStyle = '#ffccee';
+      ctx.beginPath(); ctx.moveTo(14, -15); ctx.lineTo(17, -22); ctx.lineTo(13, -16); ctx.fill();
 
-      // AI eye (on handle)
+      // Horn
+      const hornGrad = ctx.createLinearGradient(16, -20, 20, -38);
+      hornGrad.addColorStop(0, '#ffd700'); hornGrad.addColorStop(1, '#ff6b9d');
+      ctx.fillStyle = hornGrad;
+      ctx.beginPath(); ctx.moveTo(15, -18); ctx.lineTo(20, -38); ctx.lineTo(17, -16); ctx.fill();
+
+      // Eye
       ctx.fillStyle = '#c44dff';
-      ctx.beginPath(); ctx.arc(0, -1, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(14, -7, 3.5, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = 'white';
-      ctx.beginPath(); ctx.arc(-1, -2, 1.5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(15, -8, 1.5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(13, -9, 0.8, 0, Math.PI * 2); ctx.fill();
 
-      // Mouth
-      ctx.strokeStyle = '#c44dff';
-      ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.arc(0, 4, 2.5, 0, Math.PI); ctx.stroke();
+      // Cheek
+      ctx.fillStyle = 'rgba(255,150,200,0.3)';
+      ctx.beginPath(); ctx.arc(18, -3, 3, 0, Math.PI * 2); ctx.fill();
+
+      // Smile
+      ctx.strokeStyle = '#c080e0'; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.arc(18, -3, 3, 0.2, 1.2); ctx.stroke();
+
+      // Mane (rainbow)
+      const maneColors = ['#ff6b6b','#ffa500','#ffd700','#4dff88','#6b9dff','#c44dff'];
+      maneColors.forEach((c, i) => {
+        ctx.strokeStyle = c; ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(4 + i * 0.5, -8 - i * 2);
+        ctx.quadraticCurveTo(-8, -12 - i * 3, -12 - i * 2, -4 + i);
+        ctx.stroke();
+      });
+
+      // Legs
+      ctx.strokeStyle = '#f0e0ff'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+      const lk = Math.sin(frame * 0.3) * 3;
+      ctx.beginPath(); ctx.moveTo(-6, 10); ctx.lineTo(-8, 22 + lk); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(6, 10); ctx.lineTo(8, 22 - lk); ctx.stroke();
+
+      // Tail (rainbow)
+      const tc = ['#c44dff','#6b9dff','#4dff88','#ffd700'];
+      tc.forEach((c, i) => {
+        ctx.strokeStyle = c; ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-14, -2 + i * 2);
+        ctx.quadraticCurveTo(-22, -8 + i * 3 + Math.sin(frame * 0.1 + i) * 4, -28, -4 + i * 4);
+        ctx.stroke();
+      });
 
       ctx.restore();
+
+      // Sparkle trail
+      if (gameStarted && gameRunning && frame % 3 === 0) {
+        spawnParticles(uni.x - 18, uni.y, maneColors[Math.floor(Math.random() * maneColors.length)], 1);
+      }
     }
 
     function drawPipe(pipe) {
-      // Top pipe
+      const d = DIFFS[diff];
       const grad1 = ctx.createLinearGradient(pipe.x, 0, pipe.x + PIPE_W, 0);
       grad1.addColorStop(0, '#1a5c3a'); grad1.addColorStop(0.3, '#2d8f5e'); grad1.addColorStop(0.7, '#2d8f5e'); grad1.addColorStop(1, '#1a5c3a');
       ctx.fillStyle = grad1;
       ctx.fillRect(pipe.x, 0, PIPE_W, pipe.top);
-      // Cap
       ctx.fillStyle = '#247a4a';
       ctx.fillRect(pipe.x - 4, pipe.top - 20, PIPE_W + 8, 20);
       ctx.fillStyle = '#1a6040';
       ctx.fillRect(pipe.x - 4, pipe.top - 20, PIPE_W + 8, 3);
 
-      // Bottom pipe
-      const botY = pipe.top + GAP;
+      const botY = pipe.top + d.gap;
       ctx.fillStyle = grad1;
       ctx.fillRect(pipe.x, botY, PIPE_W, H - botY);
-      // Cap
       ctx.fillStyle = '#247a4a';
       ctx.fillRect(pipe.x - 4, botY, PIPE_W + 8, 20);
       ctx.fillStyle = '#1a6040';
@@ -222,84 +270,58 @@
     }
 
     function drawBackground() {
-      // Sky gradient
       const skyGrad = ctx.createLinearGradient(0, 0, 0, H);
       skyGrad.addColorStop(0, '#0a0a1a'); skyGrad.addColorStop(0.5, '#0f1028'); skyGrad.addColorStop(1, '#1a0a2e');
-      ctx.fillStyle = skyGrad;
-      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = skyGrad; ctx.fillRect(0, 0, W, H);
 
-      // Stars
       stars.forEach(s => {
         s.a += 0.005;
         const alpha = 0.3 + Math.sin(s.a) * 0.3;
-        ctx.fillStyle = `rgba(200, 200, 255, ${alpha})`;
+        ctx.fillStyle = `rgba(200,200,255,${alpha})`;
         ctx.beginPath(); ctx.arc(s.x % W, s.y % H, s.r, 0, Math.PI * 2); ctx.fill();
       });
 
-      // Ground
-      const groundY = H - 40;
-      ctx.fillStyle = '#1a3a2a';
-      ctx.fillRect(0, groundY, W, 40);
-      ctx.fillStyle = '#2d5a3a';
-      ctx.fillRect(0, groundY, W, 4);
+      ctx.fillStyle = '#1a3a2a'; ctx.fillRect(0, H - 40, W, 40);
+      ctx.fillStyle = '#2d5a3a'; ctx.fillRect(0, H - 40, W, 4);
     }
 
     function update() {
       if (!gameStarted || !gameRunning) return;
-
+      const d = DIFFS[diff];
       frame++;
 
-      // Hammer physics
-      hammer.vy += GRAVITY;
-      hammer.y += hammer.vy;
-      hammer.angle += (0 - hammer.angle) * 0.1;
+      uni.vy += d.gravity;
+      uni.y += uni.vy;
+      uni.angle += (0 - uni.angle) * 0.1;
 
-      // Pipes
-      if (frame % PIPE_INTERVAL === 0) spawnPipe();
+      if (frame % d.interval === 0) spawnPipe();
 
       pipes.forEach(pipe => {
-        pipe.x -= PIPE_SPEED;
-
-        // Score
-        if (!pipe.scored && pipe.x + PIPE_W < hammer.x) {
-          pipe.scored = true;
-          score++;
+        pipe.x -= d.speed;
+        if (!pipe.scored && pipe.x + PIPE_W < uni.x) {
+          pipe.scored = true; score++;
           document.getElementById('hudScore').textContent = score;
           sndScore();
-          spawnParticles(hammer.x, hammer.y, '#c44dff', 8);
+          spawnParticles(uni.x, uni.y, '#c44dff', 8);
         }
       });
 
-      // Remove off-screen pipes
       pipes = pipes.filter(p => p.x + PIPE_W > -20);
 
-      // Collision
-      const hx = hammer.x, hy = hammer.y;
-      const hw = 12, hh = 14; // hitbox half-sizes (smaller than visual)
-
-      // Ground/ceiling
-      if (hy + hh > H - 40 || hy - hh < 0) { gameOver(); return; }
-
-      // Pipes
+      const hw = 10, hh = 10;
+      if (uni.y + hh > H - 40 || uni.y - hh < 0) { gameOver(); return; }
       for (const pipe of pipes) {
-        if (hx + hw > pipe.x && hx - hw < pipe.x + PIPE_W) {
-          if (hy - hh < pipe.top || hy + hh > pipe.top + GAP) {
-            gameOver(); return;
-          }
+        if (uni.x + hw > pipe.x && uni.x - hw < pipe.x + PIPE_W) {
+          if (uni.y - hh < pipe.top || uni.y + hh > pipe.top + d.gap) { gameOver(); return; }
         }
       }
     }
 
     function draw() {
       drawBackground();
-
-      // Pipes
       pipes.forEach(drawPipe);
+      drawUnicorn();
 
-      // Hammer
-      drawHammer();
-
-      // Particles
       particles.forEach(p => {
         p.x += p.vx; p.y += p.vy; p.life -= p.decay; p.vy += 0.1;
         ctx.globalAlpha = p.life;
@@ -309,9 +331,8 @@
       ctx.globalAlpha = 1;
       particles = particles.filter(p => p.life > 0);
 
-      // In-game score (big)
       if (gameStarted && gameRunning) {
-        ctx.fillStyle = 'rgba(255,255,255,0.15)';
+        ctx.fillStyle = 'rgba(255,255,255,0.12)';
         ctx.font = '900 80px Inter, sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(score, W / 2, 120);
@@ -319,16 +340,10 @@
     }
 
     function gameOver() {
-      gameRunning = false;
-      sndHit();
-      spawnParticles(hammer.x, hammer.y, '#ff4444', 15);
-      spawnParticles(hammer.x, hammer.y, '#ffaa00', 10);
-
-      if (score > bestScore) {
-        bestScore = score;
-        localStorage.setItem('flappyHammerBest', bestScore);
-      }
-
+      gameRunning = false; sndHit();
+      spawnParticles(uni.x, uni.y, '#ff4444', 15);
+      spawnParticles(uni.x, uni.y, '#ffaa00', 10);
+      if (score > bestScore) { bestScore = score; localStorage.setItem('flappyUnicornBest', bestScore); }
       setTimeout(() => {
         document.getElementById('finalScore').textContent = score;
         document.getElementById('bestScore2').textContent = bestScore;
@@ -338,29 +353,21 @@
       }, 600);
     }
 
-    function gameLoop() {
-      update();
-      draw();
-      requestAnimationFrame(gameLoop);
-    }
+    function gameLoop() { update(); draw(); requestAnimationFrame(gameLoop); }
 
     function startGame() {
-      init();
-      gameRunning = true;
+      init(); gameRunning = true;
       document.getElementById('startScreen').classList.add('hidden');
       document.getElementById('overScreen').classList.add('hidden');
       document.getElementById('hud').style.display = '';
       document.getElementById('hudScore').textContent = '0';
     }
 
-    // Controls
     document.getElementById('playBtn').addEventListener('click', () => { startGame(); flap(); });
     document.getElementById('retryBtn').addEventListener('click', () => { startGame(); flap(); });
-
     canvas.addEventListener('pointerdown', e => { e.preventDefault(); flap(); });
     document.addEventListener('keydown', e => { if (e.code === 'Space') { e.preventDefault(); flap(); } });
 
-    // Init & run
     init();
     gameLoop();
   </script>
