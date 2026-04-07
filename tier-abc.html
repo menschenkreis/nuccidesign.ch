@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tier-ABC 🐾 — NucciDesigner</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    :root {
+      --bg: #fef9f0;
+      --card: #ffffff;
+      --text: #2d2a32;
+      --text-muted: #6b6880;
+      --border: #ede8e0;
+      --shadow: rgba(0,0,0,0.06);
+    }
+    [data-theme="dark"] {
+      --bg: #1a1a2e;
+      --card: #24243e;
+      --text: #f0eef5;
+      --text-muted: #9a96b0;
+      --border: #333050;
+      --shadow: rgba(0,0,0,0.2);
+    }
+
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      transition: background 0.4s, color 0.4s;
+      min-height: 100vh;
+    }
+
+    .bg-shapes {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
+    }
+    .bg-shapes .shape {
+      position: absolute; border-radius: 50%; opacity: 0.08;
+      animation: floatShape 20s ease-in-out infinite;
+    }
+    .bg-shapes .shape:nth-child(1) { width: 400px; height: 400px; background: #ff6b9d; top: -100px; left: -100px; animation-delay: 0s; }
+    .bg-shapes .shape:nth-child(2) { width: 300px; height: 300px; background: #c44dff; top: 30%; right: -80px; animation-delay: -5s; }
+    .bg-shapes .shape:nth-child(3) { width: 350px; height: 350px; background: #4dc9f6; bottom: -100px; left: 30%; animation-delay: -10s; }
+    .bg-shapes .shape:nth-child(4) { width: 250px; height: 250px; background: #f7c948; top: 60%; left: -60px; animation-delay: -15s; }
+    @keyframes floatShape {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-40px) scale(1.05); }
+    }
+
+    .wrapper { position: relative; z-index: 1; max-width: 720px; margin: 0 auto; padding: 0 20px; }
+
+    /* Nav */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: var(--bg); border-bottom: 1px solid var(--border);
+      padding: 12px 0; transition: background 0.4s, border-color 0.4s;
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    }
+    nav .wrapper { display: flex; align-items: center; justify-content: space-between; }
+    .back-link {
+      color: var(--text-muted); text-decoration: none; font-size: 0.85rem; font-weight: 600;
+      display: flex; align-items: center; gap: 6px; transition: color 0.2s;
+    }
+    .back-link:hover { color: var(--text); }
+    .nav-title { font-weight: 800; font-size: 1rem; letter-spacing: -0.02em; }
+    .theme-btn {
+      background: none; border: 1px solid var(--border); border-radius: 10px;
+      width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: var(--text-muted); transition: all 0.2s; padding: 0;
+    }
+    .theme-btn:hover { border-color: #c44dff; color: #c44dff; }
+    .icon-moon { display: none; }
+    [data-theme="light"] .icon-sun { display: none; }
+    [data-theme="light"] .icon-moon { display: block; }
+
+    /* Hero */
+    .hero { text-align: center; padding: 48px 0 24px; }
+    .hero-emoji { font-size: 3.5rem; margin-bottom: 12px; animation: bounce 2s ease-in-out infinite; }
+    @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+    .hero h1 { font-size: clamp(2rem, 6vw, 2.8rem); font-weight: 900; letter-spacing: -0.04em; margin-bottom: 8px; }
+    .hero h1 .rainbow {
+      background: linear-gradient(135deg, #ff6b9d, #c44dff, #4dc9f6, #4dff88, #f7c948);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .hero p { color: var(--text-muted); font-size: 0.95rem; font-weight: 600; }
+
+    /* Filter */
+    .filter-bar {
+      display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
+      padding: 16px 0 8px; position: sticky; top: 63px; z-index: 50;
+      background: var(--bg); transition: background 0.4s;
+    }
+    .filter-btn {
+      padding: 6px 14px; border-radius: 100px; border: 1px solid var(--border);
+      background: var(--card); color: var(--text-muted); font-size: 0.78rem; font-weight: 700;
+      font-family: 'Nunito', sans-serif; cursor: pointer; transition: all 0.2s;
+    }
+    .filter-btn.active { background: linear-gradient(135deg, #c44dff, #ff6b9d); color: white; border-color: transparent; }
+    .filter-btn:hover:not(.active) { border-color: #c44dff; color: #c44dff; }
+
+    /* ABC Grid */
+    .abc-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 14px;
+      padding: 20px 0 60px;
+    }
+    .abc-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 18px;
+      padding: 20px 16px; text-align: center; cursor: pointer;
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s;
+      position: relative; overflow: hidden;
+    }
+    .abc-card:hover { transform: translateY(-6px) scale(1.03); box-shadow: 0 12px 40px var(--shadow); }
+    .abc-card:active { transform: scale(0.97); }
+    .abc-card .letter {
+      position: absolute; top: 8px; left: 12px; font-size: 0.7rem; font-weight: 900;
+      color: var(--text-muted); opacity: 0.4;
+    }
+    .abc-card .emoji { font-size: 2.8rem; margin-bottom: 8px; display: block; line-height: 1.2; }
+    .abc-card .animal-name { font-weight: 800; font-size: 0.95rem; margin-bottom: 4px; letter-spacing: -0.01em; }
+    .abc-card .fun-fact {
+      font-size: 0.72rem; color: var(--text-muted); line-height: 1.5; font-weight: 600;
+      max-height: 0; overflow: hidden; transition: max-height 0.4s ease, margin 0.4s, opacity 0.3s;
+      opacity: 0; margin-top: 0;
+    }
+    .abc-card.expanded .fun-fact { max-height: 120px; margin-top: 8px; opacity: 1; }
+
+    .abc-card .tap-hint {
+      font-size: 0.65rem; color: var(--text-muted); opacity: 0.5; margin-top: 6px; font-weight: 600;
+      transition: opacity 0.2s;
+    }
+    .abc-card.expanded .tap-hint { opacity: 0; }
+
+    /* Special letters */
+    .abc-card.special { border-color: #c44dff40; }
+    .abc-card.special .letter { color: #c44dff; opacity: 0.7; }
+
+    /* Audio */
+    .sound-btn {
+      position: absolute; top: 8px; right: 10px; background: none; border: none;
+      font-size: 1rem; cursor: pointer; opacity: 0.4; transition: opacity 0.2s; padding: 0;
+    }
+    .abc-card:hover .sound-btn { opacity: 0.8; }
+    .sound-btn:active { opacity: 1; transform: scale(1.2); }
+
+    /* Counter */
+    .counter {
+      text-align: center; padding: 0 0 8px; font-size: 0.8rem; color: var(--text-muted); font-weight: 700;
+    }
+    .counter span { color: #c44dff; }
+
+    @media (max-width: 400px) {
+      .abc-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+      .abc-card { padding: 16px 12px; }
+      .abc-card .emoji { font-size: 2.2rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="bg-shapes">
+    <div class="shape"></div><div class="shape"></div><div class="shape"></div><div class="shape"></div>
+  </div>
+
+  <nav>
+    <div class="wrapper">
+      <a href="index.html" class="back-link">← Zrugg</a>
+      <div class="nav-title">🐾 Tier-ABC</div>
+      <button class="theme-btn" onclick="toggleTheme()" aria-label="Theme">
+        <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+    </div>
+  </nav>
+
+  <main>
+    <section class="hero">
+      <div class="wrapper">
+        <div class="hero-emoji">🦁</div>
+        <h1>Ds <span class="rainbow">Tier-ABC</span></h1>
+        <p>Vom Affe bis zum Zebra — tippe uf e Tier zum en Fun Fact z lèse!</p>
+      </div>
+    </section>
+
+    <div class="wrapper">
+      <div class="filter-bar">
+        <button class="filter-btn active" data-filter="all">Alli</button>
+        <button class="filter-btn" data-filter="normal">A–Z</button>
+        <button class="filter-btn" data-filter="special">Ä Ö Ü ß</button>
+      </div>
+      <div class="counter"><span id="countShown">29</span> Tierli</div>
+      <div class="abc-grid" id="abcGrid"></div>
+    </div>
+  </main>
+
+  <script>
+    // Theme
+    function setTheme(t) { document.documentElement.setAttribute('data-theme', t); localStorage.setItem('theme', t); }
+    const st = localStorage.getItem('theme');
+    if (st) setTheme(st);
+    else if (window.matchMedia('(prefers-color-scheme: dark)').matches) setTheme('dark');
+    function toggleTheme() { setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); }
+
+    // Audio
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playNote(freq, dur = 0.3) {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = 'triangle'; o.frequency.value = freq;
+      g.gain.setValueAtTime(0.15, audioCtx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(); o.stop(audioCtx.currentTime + dur);
+    }
+    function playAnimalSound(letter) {
+      const sounds = {
+        'A': [440, 0.2], 'B': [330, 0.25], 'C': [523, 0.2], 'D': [392, 0.2],
+        'E': [349, 0.25], 'F': [466, 0.2], 'G': [294, 0.3], 'H': [523, 0.15],
+        'I': [440, 0.2], 'J': [370, 0.2], 'K': [494, 0.2], 'L': [330, 0.25],
+        'M': [262, 0.3], 'N': [392, 0.2], 'O': [440, 0.2], 'P': [523, 0.15],
+        'Q': [349, 0.25], 'R': [294, 0.2], 'S': [587, 0.15], 'T': [330, 0.2],
+        'U': [262, 0.25], 'V': [466, 0.2], 'W': [392, 0.2], 'X': [523, 0.1],
+        'Y': [440, 0.2], 'Z': [262, 0.3], 'Ä': [466, 0.2], 'Ö': [349, 0.25],
+        'Ü': [523, 0.2], 'ß': [330, 0.25]
+      };
+      const s = sounds[letter];
+      if (s) playNote(s[0], s[1]);
+    }
+
+    // Animals data
+    const animals = [
+      { letter: 'A', name: 'Affe', emoji: '🐒', fact: 'Affe chömed wie Mänsche läche! Si chömed au Werkzüg bruuche.', special: false },
+      { letter: 'B', name: 'Bär', emoji: '🐻', fact: 'Bäre schlööfed im Winter bis zu 7 Monet lang!', special: false },
+      { letter: 'C', name: 'Chamäleon', emoji: '🦎', fact: 'Es Chamäleon cha d Farbe wächsle i nur 20 Sekunde!', special: false },
+      { letter: 'D', name: 'Delfin', emoji: '🐬', fact: 'Delfine schlööfed mit eme Aug uuf! Si chömed 300 Meter tüüf tauche.', special: false },
+      { letter: 'E', name: 'Elefant', emoji: '🐘', fact: 'En Elefant cha sich 70 Joor lang erinnere! Das isch wie en Supercomputer.', special: false },
+      { letter: 'F', name: 'Fuchs', emoji: '🦊', fact: 'En Fuchs cha einzeli Laüt ghöre — sogar en Mauwurf under dr Erde!', special: false },
+      { letter: 'G', name: 'Giraffe', emoji: '🦒', fact: 'E Giraffe het es blau-schwarze Züngli wo 50 cm lang isch!', special: false },
+      { letter: 'H', name: 'Hai', emoji: '🦈', fact: 'Hai exischtiert scho sit 400 Millione Joor — älter as d Dinosaurier!', special: false },
+      { letter: 'I', name: 'Igel', emoji: '🦔', fact: 'En Igel het öppe 5000 Stachel! Wenn er Angst het, rollt er sich zämme.', special: false },
+      { letter: 'J', name: 'Jaguar', emoji: '🐆', fact: 'De Jaguar isch einzig Grosschatz wo gelegentlich in Wasser jagt!', special: false },
+      { letter: 'K', name: 'Koala', emoji: '🐨', fact: 'Koalas schlööfed 22 Stund am Tag! Si essed nume Eukalyptus.', special: false },
+      { letter: 'L', name: 'Löiw', emoji: '🦁', fact: 'E Löiwefau brüllet bis zu 8 km wyt! Au d Männli brülled.', special: false },
+      { letter: 'M', name: 'Mauwurf', emoji: '🐹', fact: 'En Mauwurf grabt bis zu 90 Meter Tunäll pro Tag!', special: false },
+      { letter: 'N', name: 'Nashorn', emoji: '🦏', fact: 'Es Nashorn wiegt bis zu 3.5 Tonne — das sind 50 Mänsche!', special: false },
+      { letter: 'O', name: 'Otter', emoji: '🦦', fact: 'Otter schlööfed ufm Rugge im Wasser und halte sich anenander fescht!', special: false },
+      { letter: 'P', name: 'Pinguin', emoji: '🐧', fact: 'Pinguine chömed wie chlii Mänsche laufe! Si ghöred zu de Vögel.', special: false },
+      { letter: 'Q', name: 'Qualle', emoji: '🪼', fact: 'Qualle gits scho sit 500 Millione Joor — si händ kei Hirni, kei Herz, kei Bluut!', special: false },
+      { letter: 'R', name: 'Rentier', emoji: '🦌', fact: 'Rentier chömed mit eme Hufe i dr Schnäi laufe, ohni iizz versecke!', special: false },
+      { letter: 'S', name: 'Schmetterling', emoji: '🦋', fact: 'E Schmetterling schmeckt mit de Füessler! Si chömed sogar root gsund für s Männli schmecke.', special: false },
+      { letter: 'T', name: 'Tiger', emoji: '🐯', fact: 'Jede Tiger hät anderi Streife — wie e Mänschefingerabdruck!', special: false },
+      { letter: 'U', name: 'Uhu', emoji: '🦉', fact: 'De Uhu cha syn Chopf um 270 Grad drillle! Er isch dr grösst Uul vo Europa.', special: false },
+      { letter: 'V', name: 'Viper', emoji: '🐍', fact: 'D Viper cha mit ire Zunge d Luft «schmecke» und Beute findä!', special: false },
+      { letter: 'W', name: 'Wal', emoji: '🐳', fact: 'Es Blauwalherz isch so gross wie en Kleinwagen! Es schlägt 8 Mal pro Minute.', special: false },
+      { letter: 'X', name: 'X-Ray Fisch', emoji: '🐟', fact: 'De X-Ray Tetra isch durchsichtig! Me cha syni Chnoche gseh.', special: true },
+      { letter: 'Y', name: 'Yak', emoji: '🐃', fact: 'S Yak läbt i de Bärge vo Tibet bi -40°C! Syn länge Hoor schützt en.', special: true },
+      { letter: 'Z', name: 'Zebra', emoji: '🦓', fact: 'Jedes Zebra hät anderi Streife! Au zwüsche Zebra ghöre sich unterscheide.', special: false },
+      { letter: 'Ä', name: 'Äskulapnatter', emoji: '🐍', fact: 'D Äskulapnatter isch s Symbol vo de Ärz! Si isch ungiftig und sehr flink.', special: true },
+      { letter: 'Ö', name: 'Ölkönig', emoji: '🦇', fact: 'De Ölkönig isch en Nachtvogel us Südamerika. Syn Chüele chönne im Dunkle navigiere!', special: true },
+      { letter: 'Ü', name: 'Übeltäter', emoji: '🦝', fact: 'Dr Waschbär heisst uff Änglisch «raccoon» und uff Düütsch «Waschbär». Für Ü gits kei echts Tier — aber er escht e luusige Übeltäter!', special: true },
+    ];
+
+    // Build cards
+    const grid = document.getElementById('abcGrid');
+    animals.forEach(a => {
+      const card = document.createElement('div');
+      card.className = 'abc-card' + (a.special ? ' special' : '');
+      card.dataset.letter = a.letter;
+      card.dataset.special = a.special ? 'special' : 'normal';
+      card.innerHTML = `
+        <span class="letter">${a.letter}</span>
+        <button class="sound-btn" title="Ton abspiele">🔊</button>
+        <span class="emoji">${a.emoji}</span>
+        <div class="animal-name">${a.name}</div>
+        <div class="fun-fact">${a.fact}</div>
+        <div class="tap-hint">Tippe!</div>
+      `;
+      // Toggle fact
+      card.addEventListener('click', e => {
+        if (e.target.closest('.sound-btn')) return;
+        card.classList.toggle('expanded');
+      });
+      // Sound
+      card.querySelector('.sound-btn').addEventListener('click', e => {
+        e.stopPropagation();
+        playAnimalSound(a.letter);
+      });
+      grid.appendChild(card);
+    });
+
+    // Filter
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    const counter = document.getElementById('countShown');
+    filterBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        filterBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const filter = btn.dataset.filter;
+        let count = 0;
+        document.querySelectorAll('.abc-card').forEach(card => {
+          if (filter === 'all') { card.style.display = ''; count++; }
+          else if (filter === card.dataset.special) { card.style.display = ''; count++; }
+          else { card.style.display = 'none'; card.classList.remove('expanded'); }
+        });
+        counter.textContent = count;
+      });
+    });
+  </script>
+</body>
+</html>
