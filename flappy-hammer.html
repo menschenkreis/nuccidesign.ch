@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Flappy Hammer — NucciDesigner</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap');
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: 'Inter', sans-serif; background: #0a0a0f; color: #e8e8ed;
+      overflow: hidden; height: 100vh; height: 100dvh;
+      -webkit-font-smoothing: antialiased; touch-action: none; user-select: none;
+    }
+
+    canvas { display: block; width: 100%; height: 100%; }
+
+    .overlay {
+      position: fixed; inset: 0; z-index: 10;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      transition: opacity 0.4s; padding: 20px;
+    }
+    .overlay.hidden { opacity: 0; pointer-events: none; }
+
+    .title { font-size: clamp(2rem, 8vw, 3.5rem); font-weight: 900; letter-spacing: -0.04em; text-align: center; margin-bottom: 8px; }
+    .title .hammer { font-size: 1.1em; }
+    .subtitle { color: rgba(255,255,255,0.5); font-size: 0.85rem; text-align: center; margin-bottom: 32px; }
+
+    .score-display { font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; color: rgba(255,255,255,0.5); margin-bottom: 8px; }
+    .score-display span { color: #c44dff; font-weight: 700; font-size: 1.2rem; }
+
+    .play-btn {
+      padding: 16px 48px; border-radius: 100px; border: none;
+      background: linear-gradient(135deg, #c44dff, #ff6b9d); color: white;
+      font-size: 1rem; font-weight: 800; font-family: 'Inter', sans-serif;
+      cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .play-btn:hover { transform: scale(1.05); box-shadow: 0 8px 30px rgba(196,77,255,0.4); }
+    .play-btn:active { transform: scale(0.95); }
+
+    .instructions { color: rgba(255,255,255,0.4); font-size: 0.72rem; margin-top: 20px; text-align: center; line-height: 1.6; }
+
+    .back-link {
+      position: fixed; top: 16px; left: 16px; z-index: 20;
+      color: rgba(255,255,255,0.4); text-decoration: none; font-size: 0.82rem; font-weight: 600;
+      padding: 8px 14px; border-radius: 100px; border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(0,0,0,0.3); backdrop-filter: blur(8px); transition: all 0.2s;
+    }
+    .back-link:hover { color: white; border-color: rgba(255,255,255,0.3); }
+
+    .hud {
+      position: fixed; top: 16px; right: 16px; z-index: 20;
+      font-family: 'JetBrains Mono', monospace; font-size: 0.75rem;
+      color: rgba(255,255,255,0.5); padding: 6px 14px;
+      background: rgba(0,0,0,0.3); border-radius: 100px; backdrop-filter: blur(8px);
+    }
+    .hud span { color: #c44dff; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <a href="index.html" class="back-link">← Zrugg</a>
+  <div class="hud" id="hud" style="display:none;">Score: <span id="hudScore">0</span></div>
+
+  <canvas id="game"></canvas>
+
+  <!-- Start -->
+  <div class="overlay" id="startScreen">
+    <div class="title"><span class="hammer">🔨</span> Flappy<br>Hammer</div>
+    <div class="subtitle">Dä AI-Hämmer bruucht din Hilf!</div>
+    <div class="score-display">Best: <span id="bestScore">0</span></div>
+    <button class="play-btn" id="playBtn">Los!</button>
+    <div class="instructions">Tippe oder klick zum fliege<br>Dä Hämmer muess d Lücke finde!</div>
+  </div>
+
+  <!-- Game Over -->
+  <div class="overlay hidden" id="overScreen">
+    <div class="title" style="font-size:2rem;">Game Over 💀</div>
+    <div class="score-display" style="margin-top:16px;">Score: <span id="finalScore">0</span></div>
+    <div class="score-display">Best: <span id="bestScore2">0</span></div>
+    <button class="play-btn" id="retryBtn" style="margin-top:24px;">Nöimal!</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+
+    // Audio
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function beep(freq, dur, vol = 0.1, type = 'square') {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = type; o.frequency.value = freq;
+      g.gain.setValueAtTime(vol, audioCtx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+      o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + dur);
+    }
+    function sndFlap() { beep(400, 0.1, 0.08); setTimeout(() => beep(600, 0.08, 0.06), 50); }
+    function sndScore() { beep(523, 0.1, 0.08); setTimeout(() => beep(659, 0.1, 0.08), 80); setTimeout(() => beep(784, 0.15, 0.06), 160); }
+    function sndHit() { beep(150, 0.3, 0.15, 'sawtooth'); }
+
+    // Resize
+    let W, H;
+    function resize() {
+      W = canvas.width = window.innerWidth;
+      H = canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    // Game state
+    const GRAVITY = 0.45;
+    const FLAP = -7.5;
+    const PIPE_W = 60;
+    const GAP = 160;
+    const PIPE_SPEED = 2.5;
+    const PIPE_INTERVAL = 100; // frames
+
+    let hammer, pipes, score, bestScore, frame, gameRunning, gameStarted;
+    let particles = [];
+    let stars = [];
+
+    bestScore = parseInt(localStorage.getItem('flappyHammerBest') || '0');
+    document.getElementById('bestScore').textContent = bestScore;
+
+    // Stars
+    for (let i = 0; i < 60; i++) {
+      stars.push({ x: Math.random() * 2000, y: Math.random() * 2000, r: Math.random() * 1.5 + 0.5, a: Math.random() });
+    }
+
+    function init() {
+      hammer = { x: W * 0.3, y: H * 0.45, vy: 0, angle: 0, w: 40, h: 40 };
+      pipes = [];
+      score = 0;
+      frame = 0;
+      particles = [];
+      gameStarted = false;
+    }
+
+    function flap() {
+      if (!gameRunning) return;
+      if (!gameStarted) gameStarted = true;
+      hammer.vy = FLAP;
+      hammer.angle = -0.4;
+      sndFlap();
+    }
+
+    function spawnPipe() {
+      const minTop = 80;
+      const maxTop = H - GAP - 80;
+      const topH = Math.random() * (maxTop - minTop) + minTop;
+      pipes.push({ x: W + 20, top: topH, scored: false });
+    }
+
+    function spawnParticles(x, y, color, count = 5) {
+      for (let i = 0; i < count; i++) {
+        particles.push({
+          x, y, vx: (Math.random() - 0.5) * 6, vy: (Math.random() - 0.5) * 6,
+          r: Math.random() * 3 + 1, life: 1, color, decay: 0.02 + Math.random() * 0.02
+        });
+      }
+    }
+
+    function drawHammer() {
+      ctx.save();
+      ctx.translate(hammer.x, hammer.y);
+      ctx.rotate(hammer.angle);
+
+      // Handle
+      ctx.fillStyle = '#8B6914';
+      ctx.fillRect(-3, -4, 6, 24);
+      ctx.fillStyle = '#A0781A';
+      ctx.fillRect(-2, -3, 4, 22);
+
+      // Head
+      ctx.fillStyle = '#888';
+      ctx.fillRect(-14, -20, 28, 18);
+      ctx.fillStyle = '#999';
+      ctx.fillRect(-13, -19, 26, 16);
+
+      // Shine
+      ctx.fillStyle = 'rgba(255,255,255,0.15)';
+      ctx.fillRect(-12, -18, 12, 14);
+
+      // AI eye (on handle)
+      ctx.fillStyle = '#c44dff';
+      ctx.beginPath(); ctx.arc(0, -1, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = 'white';
+      ctx.beginPath(); ctx.arc(-1, -2, 1.5, 0, Math.PI * 2); ctx.fill();
+
+      // Mouth
+      ctx.strokeStyle = '#c44dff';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(0, 4, 2.5, 0, Math.PI); ctx.stroke();
+
+      ctx.restore();
+    }
+
+    function drawPipe(pipe) {
+      // Top pipe
+      const grad1 = ctx.createLinearGradient(pipe.x, 0, pipe.x + PIPE_W, 0);
+      grad1.addColorStop(0, '#1a5c3a'); grad1.addColorStop(0.3, '#2d8f5e'); grad1.addColorStop(0.7, '#2d8f5e'); grad1.addColorStop(1, '#1a5c3a');
+      ctx.fillStyle = grad1;
+      ctx.fillRect(pipe.x, 0, PIPE_W, pipe.top);
+      // Cap
+      ctx.fillStyle = '#247a4a';
+      ctx.fillRect(pipe.x - 4, pipe.top - 20, PIPE_W + 8, 20);
+      ctx.fillStyle = '#1a6040';
+      ctx.fillRect(pipe.x - 4, pipe.top - 20, PIPE_W + 8, 3);
+
+      // Bottom pipe
+      const botY = pipe.top + GAP;
+      ctx.fillStyle = grad1;
+      ctx.fillRect(pipe.x, botY, PIPE_W, H - botY);
+      // Cap
+      ctx.fillStyle = '#247a4a';
+      ctx.fillRect(pipe.x - 4, botY, PIPE_W + 8, 20);
+      ctx.fillStyle = '#1a6040';
+      ctx.fillRect(pipe.x - 4, botY, PIPE_W + 8, 3);
+    }
+
+    function drawBackground() {
+      // Sky gradient
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, H);
+      skyGrad.addColorStop(0, '#0a0a1a'); skyGrad.addColorStop(0.5, '#0f1028'); skyGrad.addColorStop(1, '#1a0a2e');
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, W, H);
+
+      // Stars
+      stars.forEach(s => {
+        s.a += 0.005;
+        const alpha = 0.3 + Math.sin(s.a) * 0.3;
+        ctx.fillStyle = `rgba(200, 200, 255, ${alpha})`;
+        ctx.beginPath(); ctx.arc(s.x % W, s.y % H, s.r, 0, Math.PI * 2); ctx.fill();
+      });
+
+      // Ground
+      const groundY = H - 40;
+      ctx.fillStyle = '#1a3a2a';
+      ctx.fillRect(0, groundY, W, 40);
+      ctx.fillStyle = '#2d5a3a';
+      ctx.fillRect(0, groundY, W, 4);
+    }
+
+    function update() {
+      if (!gameStarted || !gameRunning) return;
+
+      frame++;
+
+      // Hammer physics
+      hammer.vy += GRAVITY;
+      hammer.y += hammer.vy;
+      hammer.angle += (0 - hammer.angle) * 0.1;
+
+      // Pipes
+      if (frame % PIPE_INTERVAL === 0) spawnPipe();
+
+      pipes.forEach(pipe => {
+        pipe.x -= PIPE_SPEED;
+
+        // Score
+        if (!pipe.scored && pipe.x + PIPE_W < hammer.x) {
+          pipe.scored = true;
+          score++;
+          document.getElementById('hudScore').textContent = score;
+          sndScore();
+          spawnParticles(hammer.x, hammer.y, '#c44dff', 8);
+        }
+      });
+
+      // Remove off-screen pipes
+      pipes = pipes.filter(p => p.x + PIPE_W > -20);
+
+      // Collision
+      const hx = hammer.x, hy = hammer.y;
+      const hw = 12, hh = 14; // hitbox half-sizes (smaller than visual)
+
+      // Ground/ceiling
+      if (hy + hh > H - 40 || hy - hh < 0) { gameOver(); return; }
+
+      // Pipes
+      for (const pipe of pipes) {
+        if (hx + hw > pipe.x && hx - hw < pipe.x + PIPE_W) {
+          if (hy - hh < pipe.top || hy + hh > pipe.top + GAP) {
+            gameOver(); return;
+          }
+        }
+      }
+    }
+
+    function draw() {
+      drawBackground();
+
+      // Pipes
+      pipes.forEach(drawPipe);
+
+      // Hammer
+      drawHammer();
+
+      // Particles
+      particles.forEach(p => {
+        p.x += p.vx; p.y += p.vy; p.life -= p.decay; p.vy += 0.1;
+        ctx.globalAlpha = p.life;
+        ctx.fillStyle = p.color;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+      particles = particles.filter(p => p.life > 0);
+
+      // In-game score (big)
+      if (gameStarted && gameRunning) {
+        ctx.fillStyle = 'rgba(255,255,255,0.15)';
+        ctx.font = '900 80px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(score, W / 2, 120);
+      }
+    }
+
+    function gameOver() {
+      gameRunning = false;
+      sndHit();
+      spawnParticles(hammer.x, hammer.y, '#ff4444', 15);
+      spawnParticles(hammer.x, hammer.y, '#ffaa00', 10);
+
+      if (score > bestScore) {
+        bestScore = score;
+        localStorage.setItem('flappyHammerBest', bestScore);
+      }
+
+      setTimeout(() => {
+        document.getElementById('finalScore').textContent = score;
+        document.getElementById('bestScore2').textContent = bestScore;
+        document.getElementById('bestScore').textContent = bestScore;
+        document.getElementById('overScreen').classList.remove('hidden');
+        document.getElementById('hud').style.display = 'none';
+      }, 600);
+    }
+
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    function startGame() {
+      init();
+      gameRunning = true;
+      document.getElementById('startScreen').classList.add('hidden');
+      document.getElementById('overScreen').classList.add('hidden');
+      document.getElementById('hud').style.display = '';
+      document.getElementById('hudScore').textContent = '0';
+    }
+
+    // Controls
+    document.getElementById('playBtn').addEventListener('click', () => { startGame(); flap(); });
+    document.getElementById('retryBtn').addEventListener('click', () => { startGame(); flap(); });
+
+    canvas.addEventListener('pointerdown', e => { e.preventDefault(); flap(); });
+    document.addEventListener('keydown', e => { if (e.code === 'Space') { e.preventDefault(); flap(); } });
+
+    // Init & run
+    init();
+    gameLoop();
+  </script>
+</body>
+</html>
