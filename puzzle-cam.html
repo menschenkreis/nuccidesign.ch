@@ -107,16 +107,19 @@
     .puzzle-board canvas { width: 100%; height: 100%; display: block; }
 
     .piece {
-      position: absolute; cursor: grab; transition: box-shadow 0.2s;
+      position: absolute; cursor: grab;
       border: 1px solid rgba(255,255,255,0.15);
       box-shadow: 0 2px 8px rgba(0,0,0,0.3);
       touch-action: none;
+      will-change: transform;
     }
     .piece:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.4); z-index: 10; }
-    .piece.dragging { cursor: grabbing; box-shadow: 0 8px 30px rgba(196,77,255,0.4); z-index: 100; transition: none; }
+    .piece.dragging { cursor: grabbing; box-shadow: 0 8px 30px rgba(196,77,255,0.4); z-index: 100; }
     .piece.placed {
       border-color: transparent; box-shadow: none; cursor: default; pointer-events: none;
     }
+    .piece.snapping { transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    .piece.snapping-back { transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); }
 
     .preview-toggle {
       width: 100%; max-width: 500px; padding: 12px 0 4px;
@@ -307,6 +310,8 @@
           piece.dataset.col = col;
           piece.dataset.correctX = col * pw;
           piece.dataset.correctY = row * ph;
+          piece.dataset.gridX = col * pw;
+          piece.dataset.gridY = row * ph;
 
           // Drag
           piece.addEventListener('pointerdown', onDragStart);
@@ -332,76 +337,75 @@
       const size = board.clientWidth;
       const pw = size / gridSize;
       const positions = [];
-
-      // Create all positions
       for (let i = 0; i < gridSize * gridSize; i++) {
         positions.push({ x: (i % gridSize) * pw, y: Math.floor(i / gridSize) * pw });
       }
-
-      // Fisher-Yates shuffle
       for (let i = positions.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [positions[i], positions[j]] = [positions[j], positions[i]];
       }
-
-      // Make sure it's not already solved
-      let solved = positions.every((p, i) => p.x === pieces[i].dataset.correctX && p.y === pieces[i].dataset.correctY);
-      if (solved && positions.length > 1) {
-        [positions[0], positions[1]] = [positions[1], positions[0]];
-      }
+      let solved = positions.every((p, i) => p.x === parseFloat(pieces[i].dataset.correctX) && p.y === parseFloat(pieces[i].dataset.correctY));
+      if (solved && positions.length > 1) [positions[0], positions[1]] = [positions[1], positions[0]];
 
       pieces.forEach((piece, i) => {
-        piece.classList.remove('placed', 'dragging');
-        piece.style.left = positions[i].x + 'px';
-        piece.style.top = positions[i].y + 'px';
+        piece.classList.remove('placed', 'dragging', 'snapping', 'snapping-back');
+        piece.dataset.gridX = positions[i].x;
+        piece.dataset.gridY = positions[i].y;
+        piece.style.transform = `translate(${positions[i].x}px, ${positions[i].y}px)`;
         piece.style.pointerEvents = '';
       });
     }
 
     function showHint() {
-      const size = board.clientWidth;
       pieces.forEach(piece => {
         if (piece.classList.contains('placed')) return;
         const cx = parseFloat(piece.dataset.correctX);
         const cy = parseFloat(piece.dataset.correctY);
-        piece.style.transition = 'left 0.3s, top 0.3s';
-        piece.style.left = cx + 'px';
-        piece.style.top = cy + 'px';
-        setTimeout(() => { piece.style.transition = ''; }, 600);
+        piece.classList.add('snapping');
+        piece.style.transform = `translate(${cx}px, ${cy}px)`;
+        piece.dataset.gridX = cx;
+        piece.dataset.gridY = cy;
+        setTimeout(() => piece.classList.remove('snapping'), 350);
       });
     }
 
-    // Dragging
+    // Dragging — uses transform for GPU acceleration
     let dragPiece = null;
     let dragOffsetX = 0, dragOffsetY = 0;
-    let startLeft = 0, startTop = 0;
+    let startGX = 0, startGY = 0;
+    let boardX = 0, boardY = 0;
 
     function onDragStart(e) {
-      if (e.target.classList.contains('placed')) return;
+      if (e.target.classList.contains('placed') || e.target.classList.contains('snapping')) return;
       e.preventDefault();
+      e.stopPropagation();
 
       dragPiece = e.target;
       dragPiece.classList.add('dragging');
+      dragPiece.classList.remove('snapping', 'snapping-back');
 
-      boardRect = board.getBoundingClientRect();
-      const pieceRect = dragPiece.getBoundingClientRect();
-      dragOffsetX = e.clientX - pieceRect.left;
-      dragOffsetY = e.clientY - pieceRect.top;
-      startLeft = parseFloat(dragPiece.style.left);
-      startTop = parseFloat(dragPiece.style.top);
+      const boardRect = board.getBoundingClientRect();
+      boardX = boardRect.left;
+      boardY = boardRect.top;
 
-      document.addEventListener('pointermove', onDragMove);
+      const gx = parseFloat(dragPiece.dataset.gridX);
+      const gy = parseFloat(dragPiece.dataset.gridY);
+      startGX = gx;
+      startGY = gy;
+
+      dragOffsetX = e.clientX - boardX - gx;
+      dragOffsetY = e.clientY - boardY - gy;
+
+      document.addEventListener('pointermove', onDragMove, { passive: false });
       document.addEventListener('pointerup', onDragEnd);
     }
 
     function onDragMove(e) {
       if (!dragPiece) return;
       e.preventDefault();
-
-      const x = e.clientX - boardRect.left - dragOffsetX;
-      const y = e.clientY - boardRect.top - dragOffsetY;
-      dragPiece.style.left = x + 'px';
-      dragPiece.style.top = y + 'px';
+      const x = e.clientX - boardX - dragOffsetX;
+      const y = e.clientY - boardY - dragOffsetY;
+      dragPiece.style.transform = `translate(${x}px, ${y}px)`;
     }
 
     function onDragEnd(e) {
@@ -413,46 +417,53 @@
       moves++;
       document.getElementById('moves').textContent = moves;
 
-      // Snap to grid
       const size = board.clientWidth;
       const pw = size / gridSize;
       const cx = parseFloat(dragPiece.dataset.correctX);
       const cy = parseFloat(dragPiece.dataset.correctY);
-      const currentX = parseFloat(dragPiece.style.left);
-      const currentY = parseFloat(dragPiece.style.top);
+
+      // Get current position from transform
+      const style = dragPiece.style.transform;
+      const match = style.match(/translate\(([\d.-]+)px,\s*([\d.-]+)px\)/);
+      const currentX = match ? parseFloat(match[1]) : 0;
+      const currentY = match ? parseFloat(match[2]) : 0;
       const snapDist = pw * 0.4;
 
       if (Math.abs(currentX - cx) < snapDist && Math.abs(currentY - cy) < snapDist) {
-        // Check if spot is free (no other non-placed piece there)
+        // Check if spot is free
         const occupied = pieces.some(p => {
           if (p === dragPiece || p.classList.contains('placed')) return false;
-          return Math.abs(parseFloat(p.style.left) - cx) < pw * 0.5 && Math.abs(parseFloat(p.style.top) - cy) < pw * 0.5;
+          const pgx = parseFloat(p.dataset.gridX);
+          const pgy = parseFloat(p.dataset.gridY);
+          return Math.abs(pgx - cx) < pw * 0.5 && Math.abs(pgy - cy) < pw * 0.5;
         });
 
         if (!occupied) {
-          dragPiece.style.left = cx + 'px';
-          dragPiece.style.top = cy + 'px';
+          dragPiece.classList.add('snapping');
+          dragPiece.style.transform = `translate(${cx}px, ${cy}px)`;
+          dragPiece.dataset.gridX = cx;
+          dragPiece.dataset.gridY = cy;
           dragPiece.classList.add('placed');
           placed++;
           document.getElementById('placed').textContent = placed;
-
-          // Check win
-          if (placed === gridSize * gridSize) {
-            setTimeout(winGame, 300);
-          }
+          setTimeout(() => dragPiece.classList.remove('snapping'), 250);
+          if (placed === gridSize * gridSize) setTimeout(winGame, 300);
         } else {
-          // Bounce back
-          dragPiece.style.transition = 'left 0.2s, top 0.2s';
-          dragPiece.style.left = startLeft + 'px';
-          dragPiece.style.top = startTop + 'px';
-          setTimeout(() => dragPiece.style.transition = '', 250);
+          dragPiece.classList.add('snapping-back');
+          dragPiece.style.transform = `translate(${startGX}px, ${startGY}px)`;
+          dragPiece.dataset.gridX = startGX;
+          dragPiece.dataset.gridY = startGY;
+          setTimeout(() => dragPiece.classList.remove('snapping-back'), 300);
         }
       } else {
-        // Stay where dropped (grid snap)
+        // Snap to nearest grid
         const snapX = Math.round(currentX / pw) * pw;
         const snapY = Math.round(currentY / pw) * pw;
-        dragPiece.style.left = snapX + 'px';
-        dragPiece.style.top = snapY + 'px';
+        dragPiece.classList.add('snapping');
+        dragPiece.style.transform = `translate(${snapX}px, ${snapY}px)`;
+        dragPiece.dataset.gridX = snapX;
+        dragPiece.dataset.gridY = snapY;
+        setTimeout(() => dragPiece.classList.remove('snapping'), 250);
       }
 
       dragPiece = null;
