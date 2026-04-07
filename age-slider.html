@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Age Slider — NucciDesigner</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    :root {
+      --bg: #0a0a0f; --surface: #12121a; --surface-2: #1a1a26;
+      --border: #252535; --text: #e8e8ed; --text-muted: #6b6880;
+      --accent: #c44dff; --accent-2: #e080ff; --accent-3: #f0a0ff;
+    }
+    [data-theme="light"] {
+      --bg: #f5f3f8; --surface: #ffffff; --surface-2: #eeeaf5;
+      --border: #ddd8e8; --text: #1a1a2e; --text-muted: #7a7590;
+      --accent: #9333ea; --accent-2: #a855f7; --accent-3: #c084fc;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text);
+      min-height: 100vh; min-height: 100dvh; overflow: hidden;
+      transition: background 0.4s, color 0.4s;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Nav */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: var(--bg); border-bottom: 1px solid var(--border);
+      padding: 12px 20px; transition: background 0.4s, border-color 0.4s;
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    }
+    nav .inner { max-width: 600px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
+    .back-link { color: var(--text-muted); text-decoration: none; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+    .back-link:hover { color: var(--text); }
+    .nav-title { font-weight: 800; font-size: 0.95rem; }
+    .theme-btn {
+      background: none; border: 1px solid var(--border); border-radius: 10px;
+      width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: var(--text-muted); transition: all 0.2s; padding: 0;
+    }
+    .theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .icon-moon { display: none; }
+    [data-theme="light"] .icon-sun { display: none; }
+    [data-theme="light"] .icon-moon { display: block; }
+
+    /* Upload screen */
+    .screen { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; transition: opacity 0.5s, transform 0.5s; }
+    .screen.hidden { opacity: 0; pointer-events: none; transform: scale(0.95); }
+
+    .upload-screen { background: var(--bg); }
+    .upload-icon { font-size: 4rem; margin-bottom: 20px; }
+    .upload-title { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.04em; margin-bottom: 8px; text-align: center; }
+    .upload-title .gradient {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2), #ff6b9d);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .upload-sub { color: var(--text-muted); font-size: 0.85rem; text-align: center; margin-bottom: 32px; font-weight: 400; line-height: 1.6; }
+
+    .upload-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 400px; }
+    .upload-btn {
+      flex: 1; min-width: 160px; padding: 16px 24px; border-radius: 16px;
+      border: 2px dashed var(--border); background: var(--surface);
+      color: var(--text); font-size: 0.9rem; font-weight: 600;
+      font-family: 'Inter', sans-serif; cursor: pointer;
+      transition: all 0.3s; text-align: center;
+    }
+    .upload-btn:hover { border-color: var(--accent); background: var(--surface-2); transform: translateY(-2px); }
+    .upload-btn .btn-icon { font-size: 1.5rem; display: block; margin-bottom: 8px; }
+    .upload-btn.primary { border-style: solid; border-color: var(--accent); background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: white; }
+    .upload-btn.primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(196, 77, 255, 0.3); }
+
+    .demo-note { color: var(--text-muted); font-size: 0.72rem; margin-top: 20px; text-align: center; font-weight: 400; }
+
+    /* Age screen */
+    .age-screen { background: var(--bg); padding-top: 60px; justify-content: flex-start; gap: 0; }
+    .age-display {
+      position: relative; width: 100%; max-width: 400px; aspect-ratio: 3/4;
+      border-radius: 20px; overflow: hidden; background: var(--surface);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .age-display canvas { width: 100%; height: 100%; display: block; object-fit: cover; }
+    .age-label {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      padding: 40px 20px 20px;
+      background: linear-gradient(transparent, rgba(0,0,0,0.7));
+      color: white; text-align: center;
+    }
+    .age-number { font-size: 2.5rem; font-weight: 900; letter-spacing: -0.04em; line-height: 1; }
+    .age-text { font-size: 0.8rem; opacity: 0.7; margin-top: 4px; font-weight: 500; }
+
+    .slider-container {
+      width: 100%; max-width: 400px; padding: 24px 0 16px;
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+    }
+    .slider-labels { display: flex; justify-content: space-between; width: 100%; font-size: 0.72rem; color: var(--text-muted); font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+    input[type="range"] {
+      -webkit-appearance: none; appearance: none; width: 100%; height: 8px;
+      border-radius: 4px; outline: none; cursor: pointer;
+      background: linear-gradient(90deg, #4dff88, #f7c948, #ff6b6b, #c44dff);
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 32px; height: 32px; border-radius: 50%;
+      background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+      border: 3px solid var(--accent); cursor: grab;
+    }
+    input[type="range"]::-webkit-slider-thumb:active { cursor: grabbing; transform: scale(1.1); }
+    input[type="range"]::-moz-range-thumb {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+      border: 3px solid var(--accent); cursor: grab;
+    }
+
+    .age-presets {
+      display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
+      padding: 8px 20px 20px; max-width: 400px; width: 100%;
+    }
+    .preset-btn {
+      padding: 8px 16px; border-radius: 100px; border: 1px solid var(--border);
+      background: var(--surface); color: var(--text-muted); font-size: 0.78rem; font-weight: 700;
+      font-family: 'Inter', sans-serif; cursor: pointer; transition: all 0.2s;
+    }
+    .preset-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .preset-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+    .new-photo-btn {
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+      padding: 12px 24px; border-radius: 100px; border: 1px solid var(--border);
+      background: var(--surface); color: var(--text-muted); font-size: 0.8rem; font-weight: 600;
+      font-family: 'Inter', sans-serif; cursor: pointer; transition: all 0.2s; z-index: 60;
+    }
+    .new-photo-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .new-photo-btn.hidden { display: none; }
+
+    input[type="file"] { display: none; }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="inner">
+      <a href="index.html" class="back-link">← Zrugg</a>
+      <div class="nav-title">⏳ Age Slider</div>
+      <button class="theme-btn" onclick="toggleTheme()" aria-label="Theme">
+        <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Upload Screen -->
+  <div class="screen upload-screen" id="uploadScreen">
+    <div class="upload-icon">📷</div>
+    <h1 class="upload-title">Wie wirst du <span class="gradient">usäh</span>?</h1>
+    <p class="upload-sub">Lad e Foto huuuf und scrolle dur d Johr<br>zum z gseh wie du usgsehsch mit 80!</p>
+    <div class="upload-actions">
+      <label class="upload-btn primary" id="cameraLabel">
+        <span class="btn-icon">📸</span>
+        Foto mache
+        <input type="file" id="cameraInput" accept="image/*" capture="user">
+      </label>
+      <label class="upload-btn" id="fileLabel">
+        <span class="btn-icon">🖼️</span>
+        Us Galerie
+        <input type="file" id="fileInput" accept="image/*">
+      </label>
+    </div>
+    <p class="demo-note">Demo-Bild verfüegbar ohni Foto 🎭</p>
+    <button class="upload-btn" style="margin-top:8px; min-width:200px;" onclick="loadDemo()">
+      <span class="btn-icon">🎭</span>
+      Demo probiere
+    </button>
+  </div>
+
+  <!-- Age Screen -->
+  <div class="screen age-screen hidden" id="ageScreen">
+    <div class="age-display">
+      <canvas id="ageCanvas"></canvas>
+      <div class="age-label">
+        <div class="age-number" id="ageNumber">0</div>
+        <div class="age-text" id="ageText">Johr alt</div>
+      </div>
+    </div>
+    <div class="slider-container">
+      <div class="slider-labels"><span>0</span><span>20</span><span>40</span><span>60</span><span>80</span><span>100</span></div>
+      <input type="range" id="ageSlider" min="0" max="100" value="0">
+    </div>
+    <div class="age-presets">
+      <button class="preset-btn active" data-age="0">👶 Baby</button>
+      <button class="preset-btn" data-age="10">🧒 Chind</button>
+      <button class="preset-btn" data-age="25">🧑 Jung</button>
+      <button class="preset-btn" data-age="40">👴 Mittl</button>
+      <button class="preset-btn" data-age="60">👴 Älter</button>
+      <button class="preset-btn" data-age="80">👴 Alt</button>
+      <button class="preset-btn" data-age="100">💀 100</button>
+    </div>
+  </div>
+
+  <button class="new-photo-btn hidden" id="newPhotoBtn" onclick="resetApp()">🔄 Nöis Foto</button>
+
+  <script>
+    // Theme
+    function setTheme(t) { document.documentElement.setAttribute('data-theme', t); localStorage.setItem('theme', t); }
+    const st = localStorage.getItem('theme');
+    if (st) setTheme(st);
+    else if (window.matchMedia('(prefers-color-scheme: light)').matches) setTheme('light');
+    function toggleTheme() { setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); }
+
+    // State
+    let originalImage = null;
+    const canvas = document.getElementById('ageCanvas');
+    const ctx = canvas.getContext('2d');
+    const slider = document.getElementById('ageSlider');
+    const ageNumber = document.getElementById('ageNumber');
+    const ageText = document.getElementById('ageText');
+    const uploadScreen = document.getElementById('uploadScreen');
+    const ageScreen = document.getElementById('ageScreen');
+    const newPhotoBtn = document.getElementById('newPhotoBtn');
+
+    // File inputs
+    document.getElementById('cameraInput').addEventListener('change', e => handleFile(e.target.files[0]));
+    document.getElementById('fileInput').addEventListener('change', e => handleFile(e.target.files[0]));
+
+    function handleFile(file) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => loadImage(e.target.result);
+      reader.readAsDataURL(file);
+    }
+
+    function loadImage(src) {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        originalImage = img;
+        canvas.width = img.width;
+        canvas.height = img.height;
+        slider.value = 0;
+        applyAge(0);
+        showAgeScreen();
+      };
+      img.onerror = () => alert('Bild cha nöd glade wärde.');
+      img.src = src;
+    }
+
+    function loadDemo() {
+      // Generate a demo face using canvas
+      const c = document.createElement('canvas');
+      c.width = 400; c.height = 533;
+      const cx = c.getContext('2d');
+
+      // Background gradient
+      const grad = cx.createLinearGradient(0, 0, 400, 533);
+      grad.addColorStop(0, '#667eea'); grad.addColorStop(1, '#764ba2');
+      cx.fillStyle = grad; cx.fillRect(0, 0, 400, 533);
+
+      // Simple face
+      cx.fillStyle = '#fdbf60';
+      cx.beginPath(); cx.ellipse(200, 240, 120, 150, 0, 0, Math.PI * 2); cx.fill();
+
+      // Eyes
+      cx.fillStyle = 'white';
+      cx.beginPath(); cx.ellipse(160, 210, 25, 18, 0, 0, Math.PI * 2); cx.fill();
+      cx.beginPath(); cx.ellipse(240, 210, 25, 18, 0, 0, Math.PI * 2); cx.fill();
+      cx.fillStyle = '#4a3728';
+      cx.beginPath(); cx.arc(163, 212, 10, 0, Math.PI * 2); cx.fill();
+      cx.beginPath(); cx.arc(243, 212, 10, 0, Math.PI * 2); cx.fill();
+
+      // Mouth
+      cx.strokeStyle = '#c0392b'; cx.lineWidth = 3; cx.lineCap = 'round';
+      cx.beginPath(); cx.arc(200, 280, 30, 0.1 * Math.PI, 0.9 * Math.PI); cx.stroke();
+
+      // Nose
+      cx.strokeStyle = '#e8a84c'; cx.lineWidth = 2;
+      cx.beginPath(); cx.moveTo(200, 230); cx.quadraticCurveTo(210, 260, 200, 265); cx.stroke();
+
+      // Hair
+      cx.fillStyle = '#5d4037';
+      cx.beginPath(); cx.ellipse(200, 140, 130, 80, 0, 0, Math.PI * 2); cx.fill();
+      cx.fillRect(70, 140, 260, 30);
+
+      // Ears
+      cx.fillStyle = '#fdbf60';
+      cx.beginPath(); cx.ellipse(78, 230, 15, 25, 0, 0, Math.PI * 2); cx.fill();
+      cx.beginPath(); cx.ellipse(322, 230, 15, 25, 0, 0, Math.PI * 2); cx.fill();
+
+      // Body
+      cx.fillStyle = '#3498db';
+      cx.fillRect(140, 370, 120, 163);
+
+      // Text
+      cx.fillStyle = 'white'; cx.font = 'bold 18px Inter, sans-serif'; cx.textAlign = 'center';
+      cx.fillText('Demo-Gsicht', 200, 480);
+
+      loadImage(c.toDataURL());
+    }
+
+    function showAgeScreen() {
+      uploadScreen.classList.add('hidden');
+      ageScreen.classList.remove('hidden');
+      newPhotoBtn.classList.remove('hidden');
+    }
+
+    function resetApp() {
+      originalImage = null;
+      uploadScreen.classList.remove('hidden');
+      ageScreen.classList.add('hidden');
+      newPhotoBtn.classList.add('hidden');
+      document.getElementById('cameraInput').value = '';
+      document.getElementById('fileInput').value = '';
+    }
+
+    // Age filter
+    function applyAge(age) {
+      if (!originalImage) return;
+      const w = canvas.width, h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+      ctx.drawImage(originalImage, 0, 0, w, h);
+
+      const t = age / 100; // 0 to 1
+
+      // 1. Desaturation (colors fade with age)
+      const saturation = 1 - t * 0.7;
+      ctx.filter = `saturate(${saturation})`;
+      ctx.drawImage(canvas, 0, 0);
+      ctx.filter = 'none';
+
+      // 2. Warm color shift (skin gets more yellow/red)
+      if (t > 0.1) {
+        ctx.globalCompositeOperation = 'overlay';
+        ctx.globalAlpha = t * 0.15;
+        ctx.fillStyle = '#d4a574';
+        ctx.fillRect(0, 0, w, h);
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.globalAlpha = 1;
+      }
+
+      // 3. Contrast decrease (features soften)
+      if (t > 0.3) {
+        const contrast = 1 - (t - 0.3) * 0.3;
+        ctx.filter = `contrast(${contrast})`;
+        ctx.drawImage(canvas, 0, 0);
+        ctx.filter = 'none';
+      }
+
+      // 4. Brightness decrease
+      if (t > 0.5) {
+        const bright = 1 - (t - 0.5) * 0.25;
+        ctx.filter = `brightness(${bright})`;
+        ctx.drawImage(canvas, 0, 0);
+        ctx.filter = 'none';
+      }
+
+      // 5. Wrinkle-like noise overlay
+      if (t > 0.2) {
+        ctx.globalCompositeOperation = 'multiply';
+        ctx.globalAlpha = (t - 0.2) * 0.12;
+        const noiseCanvas = document.createElement('canvas');
+        noiseCanvas.width = w; noiseCanvas.height = h;
+        const nctx = noiseCanvas.getContext('2d');
+        const imgData = nctx.createImageData(w, h);
+        for (let i = 0; i < imgData.data.length; i += 4) {
+          const v = Math.random() > 0.5 ? 255 : 200 + Math.random() * 55;
+          imgData.data[i] = imgData.data[i+1] = imgData.data[i+2] = v;
+          imgData.data[i+3] = 255;
+        }
+        nctx.putImageData(imgData, 0, 0);
+        ctx.drawImage(noiseCanvas, 0, 0);
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.globalAlpha = 1;
+      }
+
+      // 6. Vignette (darken edges)
+      if (t > 0.3) {
+        const vg = ctx.createRadialGradient(w/2, h/2, w*0.2, w/2, h/2, w*0.7);
+        vg.addColorStop(0, 'rgba(0,0,0,0)');
+        vg.addColorStop(1, `rgba(0,0,0,${(t-0.3) * 0.4})`);
+        ctx.fillStyle = vg;
+        ctx.fillRect(0, 0, w, h);
+      }
+
+      // 7. Slight sepia at very old age
+      if (t > 0.7) {
+        ctx.globalCompositeOperation = 'overlay';
+        ctx.globalAlpha = (t - 0.7) * 0.3;
+        ctx.fillStyle = '#d4a060';
+        ctx.fillRect(0, 0, w, h);
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.globalAlpha = 1;
+      }
+
+      // Update label
+      ageNumber.textContent = age;
+      if (age === 0) ageText.textContent = 'Neugebore';
+      else if (age <= 3) ageText.textContent = 'Johr alt 👶';
+      else if (age <= 12) ageText.textContent = 'Johr alt 🧒';
+      else if (age <= 25) ageText.textContent = 'Johr alt 🧑';
+      else if (age <= 45) ageText.textContent = 'Johr alt';
+      else if (age <= 65) ageText.textContent = 'Johr alt 🧓';
+      else if (age <= 85) ageText.textContent = 'Johr alt 👴';
+      else ageText.textContent = 'Johr alt 💀';
+    }
+
+    // Slider
+    slider.addEventListener('input', () => {
+      const age = parseInt(slider.value);
+      applyAge(age);
+      // Update preset buttons
+      document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+    });
+
+    // Presets
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const age = parseInt(btn.dataset.age);
+        slider.value = age;
+        applyAge(age);
+        document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    });
+
+    // Touch drag on the age display to scrub
+    let dragging = false;
+    const ageDisplay = document.querySelector('.age-display');
+    ageDisplay.addEventListener('pointerdown', e => {
+      dragging = true;
+      updateFromTouch(e);
+    });
+    document.addEventListener('pointermove', e => { if (dragging) updateFromTouch(e); });
+    document.addEventListener('pointerup', () => dragging = false);
+
+    function updateFromTouch(e) {
+      const rect = ageDisplay.getBoundingClientRect();
+      const y = (e.clientY - rect.top) / rect.height;
+      const age = Math.round(Math.max(0, Math.min(100, (1 - y) * 100)));
+      slider.value = age;
+      applyAge(age);
+      document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+    }
+  </script>
+</body>
+</html>
