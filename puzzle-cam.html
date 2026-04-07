@@ -430,31 +430,16 @@
       const snapDist = pw * 0.4;
 
       if (Math.abs(currentX - cx) < snapDist && Math.abs(currentY - cy) < snapDist) {
-        // Check if spot is free
-        const occupied = pieces.some(p => {
-          if (p === dragPiece || p.classList.contains('placed')) return false;
-          const pgx = parseFloat(p.dataset.gridX);
-          const pgy = parseFloat(p.dataset.gridY);
-          return Math.abs(pgx - cx) < pw * 0.5 && Math.abs(pgy - cy) < pw * 0.5;
-        });
-
-        if (!occupied) {
-          dragPiece.classList.add('snapping');
-          dragPiece.style.transform = `translate(${cx}px, ${cy}px)`;
-          dragPiece.dataset.gridX = cx;
-          dragPiece.dataset.gridY = cy;
-          dragPiece.classList.add('placed');
-          placed++;
-          document.getElementById('placed').textContent = placed;
-          setTimeout(() => dragPiece.classList.remove('snapping'), 250);
-          if (placed === gridSize * gridSize) setTimeout(winGame, 300);
-        } else {
-          dragPiece.classList.add('snapping-back');
-          dragPiece.style.transform = `translate(${startGX}px, ${startGY}px)`;
-          dragPiece.dataset.gridX = startGX;
-          dragPiece.dataset.gridY = startGY;
-          setTimeout(() => dragPiece.classList.remove('snapping-back'), 300);
-        }
+        dragPiece.classList.add('snapping');
+        dragPiece.style.transform = `translate(${cx}px, ${cy}px)`;
+        dragPiece.dataset.gridX = cx;
+        dragPiece.dataset.gridY = cy;
+        dragPiece.classList.add('placed');
+        dragPiece.style.zIndex = placed;
+        placed++;
+        document.getElementById('placed').textContent = placed;
+        setTimeout(() => dragPiece.classList.remove('snapping'), 250);
+        if (placed === gridSize * gridSize) setTimeout(winGame, 300);
       } else {
         // Snap to nearest grid
         const snapX = Math.round(currentX / pw) * pw;
