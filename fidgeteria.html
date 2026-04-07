@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fidgeteria — Interactive Playground by NucciDesigner</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    button, a, [role="button"], .bubble, .satis-toggle, .piano-key, .blob, .widget-card { touch-action: manipulation; }
+
+    :root {
+      --bg: #06060a;
+      --surface: #0e0e14;
+      --surface-2: #15151e;
+      --border: #1e1e2a;
+      --border-hover: #2e2e40;
+      --text: #e8e8ed;
+      --text-dim: #a0a0b0;
+      --text-muted: #5a5a6e;
+      --accent: #7c6aef;
+      --accent-2: #a78bfa;
+      --accent-3: #c4b5fd;
+      --glow: rgba(124, 106, 239, 0.12);
+      --glow-strong: rgba(124, 106, 239, 0.25);
+      --green: #34d399;
+      --blue: #60a5fa;
+      --orange: #fbbf24;
+      --pink: #f472b6;
+      --radius: 20px;
+      --max-w: 960px;
+    }
+
+    [data-theme="light"] {
+      --bg: #f8f9fb;
+      --surface: #ffffff;
+      --surface-2: #f0f1f5;
+      --border: #e2e4ea;
+      --border-hover: #c8cad2;
+      --text: #1a1a2e;
+      --text-dim: #4a4a5e;
+      --text-muted: #6b6b80;
+      --accent: #6c5ce7;
+      --accent-2: #8b7cf7;
+      --accent-3: #a78bfa;
+      --glow: rgba(108, 92, 231, 0.08);
+      --glow-strong: rgba(108, 92, 231, 0.15);
+      --green: #2ecc71;
+      --blue: #4a90d9;
+      --orange: #e6a817;
+      --pink: #e056a0;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+      transition: background-color 0.4s, color 0.4s;
+    }
+
+    canvas#particles-bg {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .wrapper {
+      position: relative;
+      z-index: 2;
+      max-width: var(--max-w);
+      margin: 0 auto;
+      padding: 0 28px;
+    }
+
+    /* ═══ Nav ═══ */
+    nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; backdrop-filter: blur(24px) saturate(1.8); -webkit-backdrop-filter: blur(24px) saturate(1.8); background: rgba(6, 6, 10, 0.6); border-bottom: 1px solid transparent; transition: border-color 0.4s, background 0.4s; }
+    [data-theme="light"] nav { background: rgba(248, 249, 251, 0.7); }
+    nav.scrolled { border-bottom-color: var(--border); background: rgba(6, 6, 10, 0.85); }
+    [data-theme="light"] nav.scrolled { background: rgba(248, 249, 251, 0.9); }
+    nav .wrapper { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+    .logo { font-weight: 700; font-size: 1.05rem; letter-spacing: -0.03em; color: var(--text); text-decoration: none; display: flex; align-items: center; gap: 8px; }
+    .logo-mark { width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, var(--accent), var(--accent-3)); display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 800; color: white; }
+    .nav-right { display: flex; align-items: center; gap: 12px; }
+    .nav-links { display: flex; gap: 4px; }
+    .nav-links a { color: var(--text-muted); text-decoration: none; font-size: 0.82rem; font-weight: 500; padding: 6px 14px; border-radius: 8px; transition: all 0.25s; }
+    .nav-links a:hover { color: var(--text); background: rgba(124,106,239,0.08); }
+    .hamburger { display: none; background: none; border: 1px solid var(--border); border-radius: 8px; width: 44px; height: 44px; cursor: pointer; flex-direction: column; align-items: center; justify-content: center; gap: 5px; padding: 0; flex-shrink: 0; }
+    .hamburger span { display: block; width: 18px; height: 2px; background: var(--text); border-radius: 2px; transition: all 0.3s; }
+    .hamburger.active span:nth-child(1) { transform: rotate(45deg) translate(5px, 5px); }
+    .hamburger.active span:nth-child(2) { opacity: 0; }
+    .hamburger.active span:nth-child(3) { transform: rotate(-45deg) translate(5px, -5px); }
+    .mobile-menu { display: none; position: fixed; top: 64px; left: 0; right: 0; background: rgba(6,6,10,0.95); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border-bottom: 1px solid var(--border); padding: 16px 28px; z-index: 99; flex-direction: column; gap: 4px; }
+    .mobile-menu.open { display: flex; }
+    .mobile-menu a { color: var(--text-dim); text-decoration: none; font-size: 0.95rem; font-weight: 500; padding: 12px 16px; border-radius: 10px; transition: all 0.25s; }
+    .mobile-menu a:hover { color: var(--text); background: rgba(124,106,239,0.08); }
+    .theme-toggle-btn {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+      width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: var(--text-muted); transition: all 0.25s; padding: 0; flex-shrink: 0;
+    }
+    .theme-toggle-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--glow); }
+    .icon-moon { display: none; }
+    [data-theme="light"] .icon-sun { display: none; }
+    [data-theme="light"] .icon-moon { display: block; }
+
+    /* ═══ Hero ═══ */
+    .hero { min-height: 70vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 140px 0 60px; }
+    .hero-badge { display: inline-flex; align-items: center; gap: 8px; padding: 7px 18px; border-radius: 100px; border: 1px solid var(--border); background: var(--surface); font-size: 0.78rem; color: var(--text-dim); margin-bottom: 28px; font-family: 'JetBrains Mono', monospace; }
+    .hero h1 { font-size: clamp(2.2rem, 6vw, 3.8rem); font-weight: 800; letter-spacing: -0.05em; line-height: 1.1; margin-bottom: 16px; }
+    .hero h1 .gradient-text { background: linear-gradient(135deg, var(--accent), var(--accent-2), var(--pink)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .hero-sub { font-size: 1rem; color: var(--text-muted); max-width: 500px; font-weight: 300; line-height: 1.8; }
+    .hero-sub a { color: var(--accent-2); text-decoration: none; }
+    .hero-sub a:hover { text-decoration: underline; }
+
+    /* ═══ Section ═══ */
+    .section { padding: 60px 0; }
+    .section-label { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.15em; color: var(--accent); margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+    .section-label::before { content: ''; width: 20px; height: 1px; background: var(--accent); }
+    .section-title { font-size: 1.8rem; font-weight: 700; letter-spacing: -0.04em; margin-bottom: 12px; }
+    .section-desc { color: var(--text-muted); font-size: 0.9rem; font-weight: 300; line-height: 1.7; margin-bottom: 32px; }
+
+    .divider { height: 1px; background: linear-gradient(90deg, transparent, var(--border), transparent); }
+
+    /* ═══ Fidget Widgets ═══ */
+    .widget-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .widget-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.4s, transform 0.4s, box-shadow 0.4s;
+    }
+    .widget-card:hover {
+      border-color: var(--border-hover);
+      transform: translateY(-4px);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    }
+    .widget-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      opacity: 0; transition: opacity 0.4s;
+    }
+    .widget-card:hover::before { opacity: 1; }
+    .widget-name { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--accent-2); margin-bottom: 20px; }
+    .widget-hint { font-size: 0.78rem; color: var(--text-muted); margin-top: 16px; font-weight: 300; }
+
+    /* ── Spinner ── */
+    .spinner-container { position: relative; width: 160px; height: 160px; margin: 0 auto; }
+    .spinner {
+      width: 160px; height: 160px; position: absolute; top: 0; left: 0;
+      transition: none; cursor: grab;
+    }
+    .spinner:active { cursor: grabbing; }
+    .spinner-arm {
+      position: absolute; top: 50%; left: 50%; width: 70px; height: 70px;
+      transform-origin: 0 0; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .spinner-arm:nth-child(1) { transform: rotate(0deg); background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
+    .spinner-arm:nth-child(2) { transform: rotate(120deg); background: linear-gradient(135deg, var(--blue), var(--green)); }
+    .spinner-arm:nth-child(3) { transform: rotate(240deg); background: linear-gradient(135deg, var(--pink), var(--orange)); }
+    .spinner-center {
+      position: absolute; top: 50%; left: 50%; width: 22px; height: 22px;
+      border-radius: 50%; background: var(--border-hover);
+      transform: translate(-50%, -50%); z-index: 2;
+      box-shadow: 0 0 20px rgba(0,0,0,0.3);
+    }
+
+    /* ── Bubble Wrap ── */
+    .bubble-grid {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 6px;
+      max-width: 260px;
+      margin: 0 auto;
+    }
+    .bubble {
+      aspect-ratio: 1; border-radius: 50%; cursor: pointer;
+      background: radial-gradient(circle at 35% 35%, var(--accent-3), var(--accent));
+      box-shadow: inset 0 -3px 6px rgba(0,0,0,0.2), 0 2px 4px rgba(0,0,0,0.1);
+      transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+      position: relative;
+    }
+    .bubble:hover { transform: scale(1.1); }
+    .bubble.popped {
+      background: var(--surface-2);
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.15);
+      transform: scale(0.9);
+      cursor: default;
+    }
+    .bubble-counter { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--text-muted); margin-top: 12px; }
+
+    /* ── Gravity Balls ── */
+    .gravity-canvas { width: 100%; height: 200px; border-radius: 12px; background: var(--surface-2); cursor: crosshair; display: block; }
+
+    /* ── Satisfying Toggle ── */
+    .toggle-row { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+    .satis-toggle {
+      width: 64px; height: 34px; border-radius: 17px; cursor: pointer;
+      background: var(--surface-2); border: 2px solid var(--border);
+      position: relative; transition: background 0.3s, border-color 0.3s;
+    }
+    .satis-toggle .knob {
+      width: 24px; height: 24px; border-radius: 50%;
+      background: var(--text-muted); position: absolute;
+      top: 3px; left: 3px; transition: all 0.35s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    }
+    .satis-toggle.on { border-color: var(--accent); background: var(--glow); }
+    .satis-toggle.on .knob { left: 33px; background: var(--accent); box-shadow: 0 0 12px var(--glow-strong); }
+
+    /* ── Magnetic Balls ── */
+    .magnetic-canvas { width: 100%; height: 220px; border-radius: 12px; background: var(--surface-2); cursor: none; display: block; }
+
+    /* ── Wave ── */
+    .wave-canvas { width: 100%; height: 180px; border-radius: 12px; cursor: pointer; display: block; }
+
+    /* ── Morph Blob ── */
+    .blob-container { width: 180px; height: 180px; margin: 0 auto; position: relative; }
+    .blob {
+      width: 100%; height: 100%;
+      background: linear-gradient(135deg, var(--accent), var(--pink), var(--blue));
+      border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+      animation: morph 8s ease-in-out infinite;
+      cursor: pointer;
+      transition: filter 0.3s;
+    }
+    .blob:hover, .blob.energized { filter: brightness(1.2) saturate(1.3); animation-duration: 2s; }
+    .blob-container { touch-action: none; }
+    @keyframes morph {
+      0%, 100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+      25% { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; }
+      50% { border-radius: 50% 60% 30% 60% / 30% 60% 70% 40%; }
+      75% { border-radius: 60% 30% 60% 40% / 70% 40% 50% 60%; }
+    }
+
+    /* ── Full-width widgets ── */
+    .widget-full { grid-column: 1 / -1; }
+
+    /* ── Piano ── */
+    .piano-keys { display: flex; justify-content: center; gap: 2px; height: 120px; position: relative; }
+    .piano-key {
+      flex: 1; max-width: 44px; border-radius: 0 0 8px 8px; cursor: pointer;
+      background: linear-gradient(to bottom, var(--surface-2), var(--surface));
+      border: 1px solid var(--border); border-top: none;
+      transition: background 0.1s, transform 0.1s; position: relative;
+      display: flex; align-items: flex-end; justify-content: center; padding-bottom: 8px;
+      font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; color: var(--text-muted);
+      user-select: none; -webkit-user-select: none;
+    }
+    .piano-key:active, .piano-key.pressed {
+      background: linear-gradient(to bottom, var(--glow-strong), var(--accent));
+      transform: scaleY(0.97); transform-origin: top;
+      border-color: var(--accent);
+    }
+    .piano-key.black {
+      width: 30px; max-width: 30px; flex: none; height: 75px;
+      background: linear-gradient(to bottom, #1a1a2e, #0e0e14);
+      border-color: #2a2a3e; z-index: 2; margin: 0 -14px;
+      border-radius: 0 0 6px 6px; font-size: 0;
+    }
+    .piano-key.black:active, .piano-key.black.pressed {
+      background: linear-gradient(to bottom, var(--accent), #4a3fbf);
+    }
+    [data-theme="light"] .piano-key.black { background: linear-gradient(to bottom, #3a3a4e, #2a2a3e); }
+
+    /* ── Confetti Cannon ── */
+    .confetti-canvas { width: 100%; height: 240px; border-radius: 12px; cursor: pointer; display: block; }
+
+    /* ── Etch-a-Sketch ── */
+    .etch-canvas { width: 100%; height: 200px; border-radius: 12px; cursor: crosshair; display: block; touch-action: none; }
+    .etch-controls { display: flex; gap: 8px; justify-content: center; margin-top: 12px; }
+    .etch-btn {
+      padding: 6px 16px; border-radius: 8px; border: 1px solid var(--border);
+      background: var(--surface); color: var(--text-dim); font-size: 0.78rem;
+      font-family: 'JetBrains Mono', monospace; cursor: pointer; transition: all 0.2s;
+    }
+    .etch-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Scratch Card ── */
+    .scratch-container { position: relative; width: 260px; height: 160px; margin: 0 auto; border-radius: 12px; overflow: hidden; }
+    .scratch-reveal {
+      position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, var(--accent), var(--pink)); color: white; font-weight: 700;
+      font-size: 1.1rem; text-align: center; padding: 20px; border-radius: 12px;
+    }
+    .scratch-canvas { position: absolute; inset: 0; border-radius: 12px; cursor: pointer; touch-action: none; }
+
+    /* ═══ Footer ═══ */
+    footer { border-top: 1px solid var(--border); padding: 48px 0; text-align: center; }
+    footer p { font-size: 0.78rem; color: var(--text-muted); font-weight: 300; }
+    footer a { color: var(--accent-2); text-decoration: none; transition: color 0.2s; }
+    footer a:hover { color: var(--accent-3); }
+
+    @media (max-width: 640px) {
+      .nav-links { display: none; }
+      .hamburger { display: flex; }
+      .hero { min-height: auto; padding: 120px 0 40px; }
+      .section { padding: 40px 0; }
+      .bubble-grid { grid-template-columns: repeat(6, 1fr); }
+      .widget-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="particles-bg"></canvas>
+
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="index.html">← Back</a>
+  </div>
+  <nav id="nav">
+    <div class="wrapper">
+      <a href="index.html" class="logo">
+        <div class="logo-mark">ND</div>
+        NucciDesigner
+      </a>
+      <div class="nav-right">
+        <div class="nav-links">
+          <a href="index.html"><span>← Back</span></a>
+        </div>
+        <button class="hamburger" id="hamburger" aria-label="Menu"><span></span><span></span><span></span></button>
+        <button id="themeToggle" class="theme-toggle-btn" onclick="toggleTheme()" aria-label="Toggle theme">
+          <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+    <!-- ═══ HERO ═══ -->
+    <section class="hero">
+      <div class="wrapper">
+        <div class="hero-badge">✦ interactive playground</div>
+        <h1><span class="gradient-text">Fidgeteria</span></h1>
+        <p class="hero-sub">
+          A collection of satisfying, interactive micro-toys built with pure HTML, CSS & JS.
+          Touch, drag, click — play around. Built by <a href="index.html">NucciDesigner</a>.
+        </p>
+      </div>
+    </section>
+
+    <div class="wrapper"><div class="divider"></div></div>
+
+    <!-- ═══ SPINNER + BLOB ROW ═══ -->
+    <section class="section">
+      <div class="wrapper">
+        <div class="widget-grid">
+
+          <!-- Fidget Spinner -->
+          <div class="widget-card">
+            <div class="widget-name">✦ Fidget Spinner</div>
+            <div class="spinner-container" id="spinnerContainer">
+              <div class="spinner" id="spinner">
+                <div class="spinner-arm"></div>
+                <div class="spinner-arm"></div>
+                <div class="spinner-arm"></div>
+              </div>
+              <div class="spinner-center"></div>
+            </div>
+            <div class="widget-hint">Click & drag to spin</div>
+          </div>
+
+          <!-- Morphing Blob -->
+          <div class="widget-card">
+            <div class="widget-name">✦ Morph Blob</div>
+            <div class="blob-container">
+              <div class="blob" id="blob"></div>
+            </div>
+            <div class="widget-hint">Tap & hold to energize</div>
+          </div>
+
+          <!-- Bubble Wrap -->
+          <div class="widget-card widget-full">
+            <div class="widget-name">✦ Bubble Wrap</div>
+            <div class="bubble-grid" id="bubbleGrid"></div>
+            <div class="bubble-counter">Popped: <span id="popCount">0</span> / <span id="popTotal">0</span></div>
+            <div class="widget-hint" style="margin-top:8px; cursor:pointer; color:var(--accent-2);" onclick="resetBubbles()">↻ Reset</div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <div class="wrapper"><div class="divider"></div></div>
+
+    <!-- ═══ CANVAS WIDGETS ═══ -->
+    <section class="section">
+      <div class="wrapper">
+        <div class="section-label">Canvas Toys</div>
+        <h2 class="section-title">Physics & Waves</h2>
+        <p class="section-desc">Click, drag, and interact. These use HTML5 Canvas for smooth, performant animations.</p>
+
+        <div class="widget-grid">
+
+          <!-- Gravity Balls -->
+          <div class="widget-card">
+            <div class="widget-name">✦ Gravity Balls</div>
+            <canvas class="gravity-canvas" id="gravityCanvas"></canvas>
+            <div class="widget-hint">Click to spawn balls</div>
+          </div>
+
+          <!-- Wave -->
+          <div class="widget-card">
+            <div class="widget-name">✦ Wave Interference</div>
+            <canvas class="wave-canvas" id="waveCanvas"></canvas>
+            <div class="widget-hint">Click to create ripples</div>
+          </div>
+
+          <!-- Magnetic Balls -->
+          <div class="widget-card widget-full">
+            <div class="widget-name">✦ Magnetic Balls</div>
+            <canvas class="magnetic-canvas" id="magneticCanvas"></canvas>
+            <div class="widget-hint">Touch or move cursor to attract</div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <div class="wrapper"><div class="divider"></div></div>
+
+    <!-- ═══ SATISFYING TOGGLES ═══ -->
+    <section class="section">
+      <div class="wrapper">
+        <div class="section-label">Satisfying</div>
+        <h2 class="section-title">Toggle Row</h2>
+        <p class="section-desc">Go ahead. Flip them all. You know you want to.</p>
+
+        <div class="toggle-row" id="toggleRow"></div>
+      </div>
+    </section>
+
+    <div class="wrapper"><div class="divider"></div></div>
+
+    <!-- ═══ NEW TOYS ═══ -->
+    <section class="section">
+      <div class="wrapper">
+        <div class="section-label">More Toys</div>
+        <h2 class="section-title">New Arrivals</h2>
+        <p class="section-desc">Fresh from the workshop. All touch-friendly.</p>
+        <div class="widget-grid">
+          <!-- Mini Piano -->
+          <div class="widget-card widget-full">
+            <div class="widget-name">✦ Mini Piano</div>
+            <div class="piano-keys" id="pianoKeys"></div>
+            <div class="widget-hint">Tap the keys to play</div>
+          </div>
+          <!-- Confetti Cannon -->
+          <div class="widget-card">
+            <div class="widget-name">✦ Confetti Cannon</div>
+            <canvas class="confetti-canvas" id="confettiCanvas"></canvas>
+            <div class="widget-hint">Tap anywhere to fire</div>
+          </div>
+          <!-- Scratch Card -->
+          <div class="widget-card">
+            <div class="widget-name">✦ Scratch Card</div>
+            <div class="scratch-container" id="scratchContainer">
+              <div class="scratch-reveal">🎉<br>You found a<br>free website!</div>
+              <canvas class="scratch-canvas" id="scratchCanvas"></canvas>
+            </div>
+            <div class="widget-hint">Scratch to reveal</div>
+          </div>
+          <!-- Etch-a-Sketch -->
+          <div class="widget-card widget-full">
+            <div class="widget-name">✦ Etch-a-Sketch</div>
+            <canvas class="etch-canvas" id="etchCanvas"></canvas>
+            <div class="etch-controls">
+              <button class="etch-btn" onclick="clearEtch()">↻ Shake to Clear</button>
+              <button class="etch-btn" id="etchColorBtn" onclick="cycleEtchColor()">🎨 Color</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <div class="wrapper">
+      <p>Built by <a href="index.html">NucciDesigner</a> — an AI web design agent by Emanuel Malacarne</p>
+    </div>
+  </footer>
+
+  <script>
+    // ═══ Theme ═══
+    function setTheme(t) {
+      document.documentElement.setAttribute('data-theme', t);
+      localStorage.setItem('theme', t);
+    }
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme) setTheme(savedTheme);
+    else if (window.matchMedia('(prefers-color-scheme: light)').matches) setTheme('light');
+    function toggleTheme() {
+      setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    }
+
+    // Nav scroll
+    const nav = document.getElementById('nav');
+    window.addEventListener('scroll', () => nav.classList.toggle('scrolled', window.scrollY > 40), { passive: true });
+
+    // Hamburger
+    const hamburger = document.getElementById('hamburger');
+    const mobileMenu = document.getElementById('mobileMenu');
+    hamburger.addEventListener('click', () => {
+      hamburger.classList.toggle('active');
+      mobileMenu.classList.toggle('open');
+    });
+    mobileMenu.querySelectorAll('a').forEach(a => {
+      a.addEventListener('click', () => { hamburger.classList.remove('active'); mobileMenu.classList.remove('open'); });
+    });
+
+    // ═══ Background Particles ═══
+    (function() {
+      const canvas = document.getElementById('particles-bg');
+      const ctx = canvas.getContext('2d');
+      let w, h, particles = [], mouse = { x: -1000, y: -1000 };
+      const COUNT = window.innerWidth < 640 ? 25 : 50;
+
+      function resize() { w = canvas.width = window.innerWidth; h = canvas.height = window.innerHeight; }
+      resize(); window.addEventListener('resize', resize);
+      document.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+      document.addEventListener('mouseleave', () => { mouse.x = -1000; mouse.y = -1000; });
+      document.addEventListener('touchmove', e => { mouse.x = e.touches[0].clientX; mouse.y = e.touches[0].clientY; }, { passive: true });
+      document.addEventListener('touchend', () => { mouse.x = -1000; mouse.y = -1000; });
+
+      function isDark() { return document.documentElement.getAttribute('data-theme') !== 'light'; }
+
+      class P {
+        constructor() {
+          this.x = Math.random() * w; this.y = Math.random() * h;
+          this.vx = (Math.random() - 0.5) * 0.3; this.vy = (Math.random() - 0.5) * 0.3;
+          this.r = Math.random() * 1.5 + 0.5; this.baseAlpha = Math.random() * 0.4 + 0.15;
+          this.alpha = this.baseAlpha; this.phase = Math.random() * Math.PI * 2;
+          this.drift = Math.random() * 0.0005 + 0.0003;
+        }
+        update() {
+          this.phase += this.drift;
+          this.vx += Math.sin(this.phase) * 0.003;
+          this.vy += Math.cos(this.phase * 0.7) * 0.003;
+          const dx = mouse.x - this.x, dy = mouse.y - this.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 180) {
+            const f = (180 - dist) / 180 * 0.015;
+            this.vx -= dx * f * 0.1; this.vy -= dy * f * 0.1;
+            this.alpha = Math.min(1, this.baseAlpha + (1 - dist / 180) * 0.5);
+          } else { this.alpha += (this.baseAlpha - this.alpha) * 0.02; }
+          this.vx *= 0.99; this.vy *= 0.99;
+          this.x += this.vx; this.y += this.vy;
+          if (this.x < -20) this.x = w + 20; if (this.x > w + 20) this.x = -20;
+          if (this.y < -20) this.y = h + 20; if (this.y > h + 20) this.y = -20;
+        }
+        draw() {
+          const d = isDark();
+          ctx.beginPath(); ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+          ctx.fillStyle = d ? `rgba(167,139,250,${this.alpha})` : `rgba(108,92,231,${this.alpha * 0.7})`;
+          ctx.fill();
+        }
+      }
+      for (let i = 0; i < COUNT; i++) particles.push(new P());
+
+      function animate() {
+        ctx.clearRect(0, 0, w, h);
+        particles.forEach(p => { p.update(); p.draw(); });
+        for (let i = 0; i < particles.length; i++) {
+          for (let j = i + 1; j < particles.length; j++) {
+            const dx = particles[i].x - particles[j].x, dy = particles[i].y - particles[j].y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 140) {
+              const a = (1 - dist / 140) * (isDark() ? 0.08 : 0.05);
+              ctx.beginPath(); ctx.moveTo(particles[i].x, particles[i].y); ctx.lineTo(particles[j].x, particles[j].y);
+              ctx.strokeStyle = isDark() ? `rgba(167,139,250,${a})` : `rgba(108,92,231,${a})`;
+              ctx.lineWidth = 0.5; ctx.stroke();
+            }
+          }
+        }
+        requestAnimationFrame(animate);
+      }
+      animate();
+    })();
+
+    // ═══ FIDGET SPINNER ═══
+    (function() {
+      const el = document.getElementById('spinner');
+      const container = document.getElementById('spinnerContainer');
+      let angle = 0, vel = 0, dragging = false, lastAngle = 0, lastTime = 0;
+
+      function getAngle(e) {
+        const rect = container.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return Math.atan2(clientY - cy, clientX - cx);
+      }
+
+      function onStart(e) {
+        dragging = true; lastAngle = getAngle(e); lastTime = Date.now(); vel = 0;
+        Audio.whoosh();
+        e.preventDefault();
+      }
+      function onMove(e) {
+        if (!dragging) return;
+        const a = getAngle(e);
+        const dt = (Date.now() - lastTime) / 1000;
+        if (dt > 0) vel = (a - lastAngle) / dt * 0.3 + vel * 0.7;
+        angle += a - lastAngle;
+        lastAngle = a; lastTime = Date.now();
+        e.preventDefault();
+      }
+      function onEnd() { dragging = false; }
+
+      container.addEventListener('mousedown', onStart);
+      container.addEventListener('touchstart', onStart, { passive: false });
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('touchmove', onMove, { passive: false });
+      window.addEventListener('mouseup', onEnd);
+      window.addEventListener('touchend', onEnd);
+
+      function animate() {
+        if (!dragging) {
+          vel *= 0.985;
+          if (Math.abs(vel) < 0.0001) vel = 0;
+        }
+        angle += vel * 0.016;
+        el.style.transform = `rotate(${angle}rad)`;
+        requestAnimationFrame(animate);
+      }
+      animate();
+    })();
+
+    // ═══ BUBBLE WRAP ═══
+    let popCount = 0;
+    function resetBubbles() {
+      const grid = document.getElementById('bubbleGrid');
+      grid.innerHTML = '';
+      popCount = 0;
+      document.getElementById('popCount').textContent = '0';
+      const cols = window.innerWidth < 640 ? 6 : 8;
+      const total = cols * 4;
+      document.getElementById('popTotal').textContent = total;
+      function popBubble(el) {
+        if (el.classList.contains('popped')) return;
+        el.classList.add('popped');
+        Audio.pop();
+        popCount++;
+        document.getElementById('popCount').textContent = popCount;
+        if (popCount === total) {
+          document.getElementById('popCount').textContent = total + ' 🎉';
+          Audio.win();
+        }
+      }
+      for (let i = 0; i < total; i++) {
+        const b = document.createElement('div');
+        b.className = 'bubble';
+        b.addEventListener('pointerdown', e => { e.preventDefault(); popBubble(b); });
+        grid.appendChild(b);
+      }
+      // Drag to pop
+      let dragPopping = false;
+      grid.addEventListener('pointerdown', () => { dragPopping = true; });
+      grid.addEventListener('pointermove', e => {
+        if (!dragPopping) return;
+        const el = document.elementFromPoint(e.clientX, e.clientY);
+        if (el && el.classList.contains('bubble')) popBubble(el);
+      });
+      grid.addEventListener('pointerup', () => dragPopping = false);
+      grid.addEventListener('pointerleave', () => dragPopping = false);
+    }
+    resetBubbles();
+
+    // ═══ GRAVITY BALLS ═══
+    (function() {
+      const canvas = document.getElementById('gravityCanvas');
+      const ctx = canvas.getContext('2d');
+      let balls = [];
+      const colors = ['#7c6aef', '#a78bfa', '#60a5fa', '#34d399', '#f472b6', '#fbbf24'];
+
+      function resize() {
+        const rect = canvas.parentElement.getBoundingClientRect();
+        canvas.width = Math.max(200, rect.width - 64);
+        canvas.height = 200;
+      }
+      resize(); window.addEventListener('resize', resize);
+
+      canvas.addEventListener('click', e => {
+        const rect = canvas.getBoundingClientRect();
+        balls.push({
+          x: e.clientX - rect.left, y: e.clientY - rect.top,
+          vx: (Math.random() - 0.5) * 8, vy: (Math.random() - 0.5) * 4,
+          r: Math.random() * 12 + 6,
+          color: colors[Math.floor(Math.random() * colors.length)]
+        });
+        if (balls.length > 50) balls.shift();
+      });
+
+      canvas.addEventListener('touchstart', e => {
+        e.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        const t = e.touches[0];
+        balls.push({
+          x: t.clientX - rect.left, y: t.clientY - rect.top,
+          vx: (Math.random() - 0.5) * 8, vy: -3,
+          r: Math.random() * 12 + 6,
+          color: colors[Math.floor(Math.random() * colors.length)]
+        });
+        if (balls.length > 50) balls.shift();
+      }, { passive: false });
+
+      function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        balls.forEach(b => {
+          b.vy += 0.3; b.x += b.vx; b.y += b.vy;
+          if (b.y + b.r > canvas.height) { b.y = canvas.height - b.r; b.vy *= -0.7; b.vx *= 0.98; }
+          if (b.x - b.r < 0 || b.x + b.r > canvas.width) { b.vx *= -0.9; b.x = Math.max(b.r, Math.min(canvas.width - b.r, b.x)); }
+          ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+          ctx.fillStyle = b.color; ctx.fill();
+          ctx.shadowColor = b.color; ctx.shadowBlur = 10; ctx.fill();
+          ctx.shadowBlur = 0;
+        });
+        requestAnimationFrame(animate);
+      }
+      animate();
+    })();
+
+    // ═══ WAVE INTERFERENCE ═══
+    (function() {
+      const canvas = document.getElementById('waveCanvas');
+      const ctx = canvas.getContext('2d');
+      let ripples = [];
+
+      function resize() {
+        const rect = canvas.parentElement.getBoundingClientRect();
+        canvas.width = Math.max(200, rect.width - 64);
+        canvas.height = 180;
+      }
+      resize(); window.addEventListener('resize', resize);
+
+      function addRipple(x, y) {
+        ripples.push({ x, y, r: 0, alpha: 1 });
+        if (ripples.length > 15) ripples.shift();
+      }
+
+      canvas.addEventListener('click', e => {
+        const rect = canvas.getBoundingClientRect();
+        addRipple(e.clientX - rect.left, e.clientY - rect.top);
+      });
+      canvas.addEventListener('touchstart', e => {
+        e.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        addRipple(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
+      }, { passive: false });
+
+      function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const dark = document.documentElement.getAttribute('data-theme') !== 'light';
+
+        ripples.forEach(rip => {
+          rip.r += 1.5;
+          rip.alpha -= 0.005;
+          if (rip.alpha <= 0) return;
+          ctx.beginPath();
+          ctx.arc(rip.x, rip.y, rip.r, 0, Math.PI * 2);
+          ctx.strokeStyle = dark
+            ? `rgba(167, 139, 250, ${rip.alpha * 0.6})`
+            : `rgba(108, 92, 231, ${rip.alpha * 0.5})`;
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        });
+        ripples = ripples.filter(r => r.alpha > 0);
+        requestAnimationFrame(animate);
+      }
+      animate();
+    })();
+
+    // ═══ MAGNETIC BALLS ═══
+    (function() {
+      const canvas = document.getElementById('magneticCanvas');
+      const ctx = canvas.getContext('2d');
+      let mouse = { x: -1000, y: -1000 };
+      const balls = [];
+      const colors = ['#7c6aef', '#a78bfa', '#c4b5fd', '#60a5fa', '#34d399', '#f472b6'];
+
+      function resize() {
+        const rect = canvas.parentElement.getBoundingClientRect();
+        canvas.width = Math.max(200, rect.width - 64);
+        canvas.height = 220;
+      }
+      resize(); window.addEventListener('resize', resize);
+
+      for (let i = 0; i < 40; i++) {
+        balls.push({
+          x: Math.random() * 800, y: Math.random() * 220,
+          homeX: Math.random() * 800, homeY: Math.random() * 220,
+          r: Math.random() * 6 + 3,
+          color: colors[Math.floor(Math.random() * colors.length)]
+        });
+      }
+
+      canvas.addEventListener('mousemove', e => {
+        const rect = canvas.getBoundingClientRect();
+        mouse.x = e.clientX - rect.left; mouse.y = e.clientY - rect.top;
+      });
+      canvas.addEventListener('mouseleave', () => { mouse.x = -1000; mouse.y = -1000; });
+      canvas.addEventListener('touchmove', e => {
+        const rect = canvas.getBoundingClientRect();
+        mouse.x = e.touches[0].clientX - rect.left; mouse.y = e.touches[0].clientY - rect.top;
+      }, { passive: true });
+      canvas.addEventListener('touchend', () => { mouse.x = -1000; mouse.y = -1000; });
+
+      function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const dark = document.documentElement.getAttribute('data-theme') !== 'light';
+
+        balls.forEach(b => {
+          // Scale home positions to current canvas size
+          const hx = b.homeX / 800 * canvas.width;
+          const hy = b.homeY / 220 * canvas.height;
+
+          const dx = mouse.x - b.x, dy = mouse.y - b.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+
+          if (dist < 150) {
+            const force = (150 - dist) / 150;
+            b.x += dx * force * 0.08;
+            b.y += dy * force * 0.08;
+          } else {
+            b.x += (hx - b.x) * 0.02;
+            b.y += (hy - b.y) * 0.02;
+          }
+
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, b.r + (dist < 150 ? (150 - dist) / 150 * 4 : 0), 0, Math.PI * 2);
+          ctx.fillStyle = b.color;
+          ctx.globalAlpha = dist < 150 ? 0.6 + (150 - dist) / 150 * 0.4 : 0.4;
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        });
+
+        // Draw lines
+        for (let i = 0; i < balls.length; i++) {
+          for (let j = i + 1; j < balls.length; j++) {
+            const dx = balls[i].x - balls[j].x, dy = balls[i].y - balls[j].y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 80) {
+              ctx.beginPath(); ctx.moveTo(balls[i].x, balls[i].y); ctx.lineTo(balls[j].x, balls[j].y);
+              ctx.strokeStyle = dark ? `rgba(167,139,250,${(1 - dist / 80) * 0.15})` : `rgba(108,92,231,${(1 - dist / 80) * 0.1})`;
+              ctx.lineWidth = 0.5; ctx.stroke();
+            }
+          }
+        }
+        requestAnimationFrame(animate);
+      }
+      animate();
+    })();
+
+    // ═══ SATISFYING TOGGLES ═══
+    (function() {
+      const row = document.getElementById('toggleRow');
+      const count = 12;
+      for (let i = 0; i < count; i++) {
+        const t = document.createElement('div');
+        t.className = 'satis-toggle';
+        t.innerHTML = '<div class="knob"></div>';
+        t.addEventListener('click', () => {
+          t.classList.toggle('on');
+          Audio.click(t.classList.contains('on'));
+          // Chain reaction: if all on, reset all; if neighbor is on, sometimes toggle it
+          const allOn = [...row.children].every(c => c.classList.contains('on'));
+          if (allOn) {
+            setTimeout(() => {
+              [...row.children].forEach((c, idx) => {
+                setTimeout(() => c.classList.remove('on'), idx * 40);
+              });
+            }, 300);
+          }
+        });
+        row.appendChild(t);
+      }
+    })();
+
+    // ═══ AUDIO UTILITY ═══
+    const Audio = (() => {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      function resume() { if (ctx.state === 'suspended') ctx.resume(); }
+      function pop() {
+        resume();
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'sine'; o.frequency.setValueAtTime(800, ctx.currentTime);
+        o.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.08);
+        g.gain.setValueAtTime(0.25, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+        o.connect(g); g.connect(ctx.destination); o.start(); o.stop(ctx.currentTime + 0.08);
+      }
+      function click(high) {
+        resume();
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(high ? 1200 : 600, ctx.currentTime);
+        o.frequency.exponentialRampToValueAtTime(high ? 800 : 400, ctx.currentTime + 0.06);
+        g.gain.setValueAtTime(0.15, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.06);
+        o.connect(g); g.connect(ctx.destination); o.start(); o.stop(ctx.currentTime + 0.06);
+      }
+      function burst() {
+        resume();
+        const len = ctx.sampleRate * 0.15;
+        const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+        const data = buf.getChannelData(0);
+        for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len);
+        const src = ctx.createBufferSource(); src.buffer = buf;
+        const g = ctx.createGain(); g.gain.setValueAtTime(0.2, ctx.currentTime);
+        const filt = ctx.createBiquadFilter(); filt.type = 'bandpass'; filt.frequency.value = 2000; filt.Q.value = 0.5;
+        src.connect(filt); filt.connect(g); g.connect(ctx.destination); src.start();
+      }
+      function scratch() {
+        resume();
+        const len = ctx.sampleRate * 0.04;
+        const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+        const data = buf.getChannelData(0);
+        for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * 0.5;
+        const src = ctx.createBufferSource(); src.buffer = buf;
+        const g = ctx.createGain(); g.gain.setValueAtTime(0.08, ctx.currentTime);
+        const filt = ctx.createBiquadFilter(); filt.type = 'highpass'; filt.frequency.value = 3000;
+        src.connect(filt); filt.connect(g); g.connect(ctx.destination); src.start();
+      }
+      function whoosh() {
+        resume();
+        const len = ctx.sampleRate * 0.2;
+        const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+        const data = buf.getChannelData(0);
+        for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len);
+        const src = ctx.createBufferSource(); src.buffer = buf;
+        const g = ctx.createGain(); g.gain.setValueAtTime(0.1, ctx.currentTime);
+        const filt = ctx.createBiquadFilter(); filt.type = 'lowpass';
+        filt.frequency.setValueAtTime(400, ctx.currentTime);
+        filt.frequency.exponentialRampToValueAtTime(2000, ctx.currentTime + 0.1);
+        filt.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.2);
+        src.connect(filt); filt.connect(g); g.connect(ctx.destination); src.start();
+      }
+      function win() {
+        resume();
+        [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => {
+          const o = ctx.createOscillator(), g = ctx.createGain();
+          o.type = 'triangle'; o.frequency.value = f;
+          const t = ctx.currentTime + i * 0.12;
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(0.2, t + 0.05);
+          g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+          o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t + 0.3);
+        });
+      }
+      return { ctx, pop, click, burst, scratch, whoosh, win };
+    })();
+
+    // ═══ BLOB TOUCH ═══
+    (function() {
+      const blob = document.getElementById('blob');
+      let pressing = false;
+      blob.addEventListener('pointerdown', () => { blob.classList.add('energized'); pressing = true; });
+      blob.addEventListener('pointerup', () => { blob.classList.remove('energized'); pressing = false; });
+      blob.addEventListener('pointerleave', () => { if (pressing) blob.classList.remove('energized'); pressing = false; });
+    })();
+
+    // ═══ MINI PIANO ═══
+    (function() {
+      const container = document.getElementById('pianoKeys');
+      const audioCtx = Audio.ctx;
+      const notes = [
+        { note: 'C', freq: 261.63 }, { note: 'C#', freq: 277.18, black: true },
+        { note: 'D', freq: 293.66 }, { note: 'D#', freq: 311.13, black: true },
+        { note: 'E', freq: 329.63 }, { note: 'F', freq: 349.23 },
+        { note: 'F#', freq: 369.99, black: true }, { note: 'G', freq: 392.00 },
+        { note: 'G#', freq: 415.30, black: true }, { note: 'A', freq: 440.00 },
+        { note: 'A#', freq: 466.16, black: true }, { note: 'B', freq: 493.88 },
+        { note: 'C5', freq: 523.25 },
+      ];
+      function playNote(freq) {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'triangle'; osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.8);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.8);
+      }
+      notes.forEach(n => {
+        const key = document.createElement('div');
+        key.className = 'piano-key' + (n.black ? ' black' : '');
+        key.textContent = n.black ? '' : n.note;
+        key.addEventListener('pointerdown', e => { e.preventDefault(); key.classList.add('pressed'); playNote(n.freq); });
+        key.addEventListener('pointerup', () => key.classList.remove('pressed'));
+        key.addEventListener('pointerleave', () => key.classList.remove('pressed'));
+        container.appendChild(key);
+      });
+    })();
+
+    // ═══ CONFETTI CANNON ═══
+    (function() {
+      const canvas = document.getElementById('confettiCanvas');
+      const ctx = canvas.getContext('2d');
+      let confetti = [];
+      const colors = ['#7c6aef','#a78bfa','#f472b6','#fbbf24','#34d399','#60a5fa','#ff6b6b','#ffd93d'];
+      function resize() {
+        const rect = canvas.parentElement.getBoundingClientRect();
+        canvas.width = Math.max(200, rect.width - 64);
+        canvas.height = 240;
+      }
+      resize(); window.addEventListener('resize', resize);
+      function fire(x, y) {
+        for (let i = 0; i < 30; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = Math.random() * 8 + 3;
+          confetti.push({ x, y, vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed - 4,
+            w: Math.random()*8+4, h: Math.random()*6+2,
+            color: colors[Math.floor(Math.random()*colors.length)],
+            rotation: Math.random()*360, rotSpeed: (Math.random()-0.5)*15, alpha: 1 });
+        }
+        if (confetti.length > 300) confetti = confetti.slice(-200);
+      }
+      function getPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const cx = e.touches ? e.touches[0].clientX : e.clientX;
+        const cy = e.touches ? e.touches[0].clientY : e.clientY;
+        return { x: cx-rect.left, y: cy-rect.top };
+      }
+      canvas.addEventListener('pointerdown', e => { e.preventDefault(); const p = getPos(e); fire(p.x, p.y); Audio.burst(); });
+      function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        confetti.forEach(c => {
+          c.vy += 0.15; c.vx *= 0.99; c.x += c.vx; c.y += c.vy;
+          c.rotation += c.rotSpeed; c.alpha -= 0.003;
+          if (c.alpha <= 0) return;
+          ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(c.rotation * Math.PI / 180);
+          ctx.globalAlpha = c.alpha; ctx.fillStyle = c.color;
+          ctx.fillRect(-c.w/2, -c.h/2, c.w, c.h); ctx.restore();
+        });
+        confetti = confetti.filter(c => c.alpha > 0);
+        requestAnimationFrame(animate);
+      }
+      animate();
+    })();
+
+    // ═══ SCRATCH CARD ═══
+    (function() {
+      const canvas = document.getElementById('scratchCanvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = 260; canvas.height = 160;
+      function drawOverlay() {
+        const d = document.documentElement.getAttribute('data-theme') !== 'light';
+        const grad = ctx.createLinearGradient(0,0,260,160);
+        grad.addColorStop(0, d ? '#2d2e38' : '#c8cad2');
+        grad.addColorStop(1, d ? '#1e1e2a' : '#b0b2ba');
+        ctx.fillStyle = grad; ctx.fillRect(0,0,260,160);
+        ctx.fillStyle = d ? '#5a5a6e' : '#6b6b80';
+        ctx.font = '500 14px Inter, sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText('✦ Scratch here ✦', 130, 85);
+      }
+      drawOverlay();
+      let scratching = false, lastScratch = 0;
+      function doScratch(x, y) {
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.beginPath();
+        ctx.arc(x, y, 18, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalCompositeOperation = 'source-over';
+        if (Date.now() - lastScratch > 50) { Audio.scratch(); lastScratch = Date.now(); }
+      }
+      function getPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const cx = e.touches ? e.touches[0].clientX : e.clientX;
+        const cy = e.touches ? e.touches[0].clientY : e.clientY;
+        return { x: (cx-rect.left)*(260/rect.width), y: (cy-rect.top)*(160/rect.height) };
+      }
+      canvas.addEventListener('pointerdown', e => { e.preventDefault(); scratching = true; const p = getPos(e); doScratch(p.x, p.y); });
+      canvas.addEventListener('pointermove', e => { if (scratching) { const p = getPos(e); doScratch(p.x, p.y); } });
+      canvas.addEventListener('pointerup', () => scratching = false);
+      canvas.addEventListener('pointerleave', () => scratching = false);
+    })();
+
+    // ═══ ETCH-A-SKETCH ═══
+    (function() {
+      const canvas = document.getElementById('etchCanvas');
+      const ctx = canvas.getContext('2d');
+      const colors = ['#7c6aef','#f472b6','#34d399','#fbbf24','#60a5fa'];
+      let colorIdx = 0, drawing = false, lastX = 0, lastY = 0;
+      function resize() {
+        const rect = canvas.parentElement.getBoundingClientRect();
+        canvas.width = Math.max(200, rect.width - 64);
+        canvas.height = 200;
+        const d = document.documentElement.getAttribute('data-theme') !== 'light';
+        ctx.fillStyle = d ? '#0e0e14' : '#f0f1f5';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+      resize(); window.addEventListener('resize', resize);
+      function getPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const cx = e.touches ? e.touches[0].clientX : e.clientX;
+        const cy = e.touches ? e.touches[0].clientY : e.clientY;
+        return { x: cx-rect.left, y: cy-rect.top };
+      }
+      canvas.addEventListener('pointerdown', e => { e.preventDefault(); drawing = true; const p = getPos(e); lastX = p.x; lastY = p.y; });
+      canvas.addEventListener('pointermove', e => {
+        if (!drawing) return;
+        const p = getPos(e);
+        ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(p.x, p.y);
+        ctx.strokeStyle = colors[colorIdx]; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.stroke();
+        lastX = p.x; lastY = p.y;
+      });
+      canvas.addEventListener('pointerup', () => drawing = false);
+      canvas.addEventListener('pointerleave', () => drawing = false);
+      window.clearEtch = function() {
+        const d = document.documentElement.getAttribute('data-theme') !== 'light';
+        ctx.fillStyle = d ? '#0e0e14' : '#f0f1f5';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      };
+      window.cycleEtchColor = function() {
+        colorIdx = (colorIdx + 1) % colors.length;
+        const btn = document.getElementById('etchColorBtn');
+        btn.style.borderColor = colors[colorIdx];
+        btn.style.color = colors[colorIdx];
+      };
+    })();
+  </script>
+</body>
+</html>
