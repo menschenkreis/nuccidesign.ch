@@ -59,7 +59,7 @@
     <div class="start-avatar">👩</div>
     <div class="start-title">Chat mit Mami</div>
     <div class="start-desc">Dini Mami wartet uf di. Si gseht immer, dass du nüm gschribe hesch!</div>
-    <button class="start-btn" onclick="startChat()">Nachricht schicke 💬</button>
+    <button class="start-btn" id="startBtn">Nachricht schicke 💬</button>
   </div>
 
   <div class="header">
@@ -476,7 +476,35 @@
     }
 
     // Focus input on load
-    input.focus();
+    // Bulletproof start button for Telegram WebView
+    const startBtn = document.getElementById('startBtn');
+    if (startBtn) {
+      startBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        startChat();
+      });
+      startBtn.addEventListener('touchend', function(e) {
+        e.preventDefault();
+        startChat();
+      });
+    }
+    // Also allow clicking the overlay itself to dismiss
+    const overlay = document.getElementById('startOverlay');
+    if (overlay) {
+      overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) startChat();
+      });
+      overlay.addEventListener('touchend', function(e) {
+        if (e.target === overlay) startChat();
+      });
+    }
+    // Fallback: if overlay is somehow stuck, start chat after 3s
+    setTimeout(function() {
+      if (document.getElementById('startOverlay') && !document.getElementById('startOverlay').classList.contains('hidden')) {
+        startChat();
+      }
+    }, 3000);
+    try { input.focus(); } catch(e) {}
   </script>
 </body>
 </html>
