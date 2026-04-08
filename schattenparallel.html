@@ -10,9 +10,10 @@
     body {
       font-family: 'Inter', sans-serif; background: #000; color: #e8e8ed;
       overflow: hidden; height: 100vh; height: 100dvh;
-      -webkit-font-smoothing: antialiased; touch-action: none; user-select: none;
+      -webkit-font-smoothing: antialiased; user-select: none;
     }
-    canvas { display: block; width: 100%; height: 100%; }
+    canvas { display: block; width: 100%; height: 100%; position: fixed; inset: 0; z-index: 1; }
+
     .overlay {
       position: fixed; inset: 0; z-index: 10;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -29,6 +30,7 @@
       background: linear-gradient(135deg, #c44dff, #60a5fa); color: white;
       font-size: 1rem; font-weight: 800; font-family: 'Inter', sans-serif;
       cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;
+      z-index: 15; position: relative;
     }
     .play-btn:hover { transform: scale(1.05); box-shadow: 0 8px 30px rgba(196,77,255,0.4); }
     .play-btn:active { transform: scale(0.95); }
@@ -52,7 +54,6 @@
       color: rgba(255,255,255,0.7);
     }
     .hud .badge .v { color: #c44dff; }
-    .hud .badge .b { color: #60a5fa; }
     .hud .deaths { color: #ef4444; font-weight: 700; }
     .level-banner {
       position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -63,6 +64,22 @@
     .level-banner.show { opacity: 1; }
     .game-over .final { font-family: 'JetBrains Mono', monospace; font-size: 2rem; font-weight: 900; color: #c44dff; margin: 8px 0; }
     .game-over .stats { color: rgba(255,255,255,0.45); font-size: 0.82rem; margin-bottom: 20px; }
+
+    /* D-pad for mobile */
+    .dpad {
+      position: fixed; bottom: 30px; right: 30px; z-index: 20;
+      display: grid; grid-template-columns: 56px 56px 56px;
+      grid-template-rows: 56px 56px 56px; gap: 4px;
+    }
+    .dpad-btn {
+      width: 56px; height: 56px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.08); backdrop-filter: blur(8px);
+      color: rgba(255,255,255,0.6); font-size: 1.2rem;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; -webkit-tap-highlight-color: transparent;
+    }
+    .dpad-btn:active { background: rgba(196,77,255,0.3); border-color: #c44dff; }
+    .dpad-blank { visibility: hidden; }
   </style>
 </head>
 <body>
@@ -72,19 +89,33 @@
     <div class="badge deaths" id="hudDeaths">💀 0</div>
   </div>
   <div class="level-banner" id="levelBanner"></div>
+
   <canvas id="game"></canvas>
+
+  <!-- D-pad -->
+  <div class="dpad" id="dpad" style="display:none;">
+    <div class="dpad-blank"></div>
+    <div class="dpad-btn" id="btnUp">↑</div>
+    <div class="dpad-blank"></div>
+    <div class="dpad-btn" id="btnLeft">←</div>
+    <div class="dpad-blank"></div>
+    <div class="dpad-btn" id="btnRight">→</div>
+    <div class="dpad-blank"></div>
+    <div class="dpad-btn" id="btnDown">↓</div>
+    <div class="dpad-blank"></div>
+  </div>
 
   <div class="overlay" id="startScreen">
     <div class="title"><span class="glow">Schatten</span><br><span class="dark">parallel</span></div>
     <div class="subtitle">Du spielst ZWEI Welten gleichzeitig. Was im Licht sicher ist, kann im Schatten tödlich sein — und umgekehrt.</div>
-    <button class="play-btn" id="startBtn">⚡ Los geht's!</button>
+    <button class="play-btn" onclick="startGame()">⚡ Los geht's!</button>
     <div class="instructions">
-      <strong>↑↓←→ / Swipe</strong> zum Bewegen<br>
-      <strong>Licht-Welt</strong> (oben) & <strong>Schatten-Welt</strong> ( unten)<br>
+      <strong>Pfeiltasten / D-Pad</strong> zum Bewegen<br>
+      <strong>Licht-Welt</strong> (oben) & <strong>Schatten-Welt</strong> (unten)<br>
       Beide Charaktere bewegen sich GLEICHZEITIG<br>
       <strong>✨ Lichtsiegel</strong> bringen beide zum Ziel<br>
       <strong>⚠️ Gefahren</strong> existieren nur in EINER Welt!<br>
-      Du musst einen Weg finden, der für BEIDE funktioniert
+      Finde den Weg für BEIDE Welten
     </div>
   </div>
 
@@ -92,7 +123,7 @@
     <div class="title">😵 Geschafft!</div>
     <div class="final" id="finalLevel">Level 1</div>
     <div class="stats" id="finalStats"></div>
-    <button class="play-btn" id="restartBtn">🔄 Nochmal</button>
+    <button class="play-btn" onclick="startGame()">🔄 Nochmal</button>
   </div>
 
   <script>
@@ -104,33 +135,62 @@
     const levelBanner = document.getElementById('levelBanner');
     const startScreen = document.getElementById('startScreen');
     const gameOverScreen = document.getElementById('gameOver');
+    const dpad = document.getElementById('dpad');
 
     let W, H, dpr;
     let state = 'menu';
     let level = 1, deaths = 0;
     let frameCount = 0;
 
-    // Two halves
-    const HALF_H = () => H / 2 - 20;
     const LIGHT_TOP = 60;
     const SHADOW_TOP = () => H / 2 + 20;
     const PLATE_H = () => Math.max(120, H / 2 - 80);
-
-    // Player size
     const PS = 14;
 
-    // Player (both worlds mirror)
     let px, py;
     let lightWalls, shadowWalls, lightSpikes, shadowSpikes;
     let lightGoal, shadowGoal;
     let lightCollected, shadowCollected;
 
-    // Input
-    let keys = {};
-    let touchStart = null;
-    let touchDir = { x: 0, y: 0 };
-    let moveQueue = [];
+    // ── D-pad input (works everywhere) ──
+    let moveInterval = null;
 
+    function dpadStart(dx, dy) {
+      dpadStop();
+      tryMove(dx, dy);
+      moveInterval = setInterval(() => tryMove(dx, dy), 110);
+    }
+
+    function dpadStop() {
+      if (moveInterval) { clearInterval(moveInterval); moveInterval = null; }
+    }
+
+    // Touch + mouse for each dpad button
+    ['btnUp', 'btnDown', 'btnLeft', 'btnRight'].forEach(id => {
+      const el = document.getElementById(id);
+      const dirs = { btnUp: [0, -1], btnDown: [0, 1], btnLeft: [-1, 0], btnRight: [1, 0] };
+      const [dx, dy] = dirs[id];
+
+      el.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); dpadStart(dx, dy); });
+      el.addEventListener('touchend', e => { e.preventDefault(); dpadStop(); });
+      el.addEventListener('touchcancel', e => { dpadStop(); });
+      el.addEventListener('mousedown', e => { e.preventDefault(); e.stopPropagation(); dpadStart(dx, dy); });
+      el.addEventListener('mouseup', e => { dpadStop(); });
+      el.addEventListener('mouseleave', e => { dpadStop(); });
+    });
+
+    // Keyboard
+    const keyMap = { ArrowUp: [0,-1], ArrowDown: [0,1], ArrowLeft: [-1,0], ArrowRight: [1,0], w: [0,-1], s: [0,1], a: [-1,0], d: [1,0] };
+    document.addEventListener('keydown', e => {
+      if (!keyMap[e.key]) return;
+      e.preventDefault();
+      dpadStart(keyMap[e.key][0], keyMap[e.key][1]);
+    });
+    document.addEventListener('keyup', e => {
+      if (keyMap[e.key]) dpadStop();
+    });
+
+    // ── Resize ──
     function resize() {
       dpr = window.devicePixelRatio || 1;
       W = window.innerWidth;
@@ -148,23 +208,20 @@
       const ox = (W - pw) / 2;
       const lightY = LIGHT_TOP;
       const shadowY = SHADOW_TOP();
-      const gs = 22; // grid size
+      const gs = 22;
       const cols = Math.floor(pw / gs);
       const rows = Math.floor(ph / gs);
 
-      // Start position
       px = ox + gs * 1.5;
       py = gs * 1.5;
 
       lightWalls = []; shadowWalls = [];
       lightSpikes = []; shadowSpikes = [];
-      lightGoal = null; shadowGoal = null;
       lightCollected = false; shadowCollected = false;
 
       const wallChance = Math.min(0.18 + lvl * 0.03, 0.35);
       const spikeChance = Math.min(0.06 + lvl * 0.02, 0.18);
 
-      // Generate maze-like walls using a seed
       function seededRandom(seed) {
         let s = seed;
         return () => { s = (s * 16807 + 0) % 2147483647; return s / 2147483647; };
@@ -186,23 +243,20 @@
         shadowWalls.push({ x: ox + (cols - 1) * gs, y: shadowY + r * gs, w: gs, h: gs });
       }
 
-      // Random internal walls - LIGHT world
-      for (let r = 2; r < rows - 2; r++) {
-        for (let c = 2; c < cols - 2; c++) {
-          if (r < 4 && c < 4) continue; // keep start clear
-          if (r > rows - 5 && c > cols - 5) continue; // keep goal clear
-          if (rng() < wallChance) {
-            lightWalls.push({ x: ox + c * gs, y: lightY + r * gs, w: gs, h: gs });
-          }
-        }
-      }
-
-      // SHADOW world: different wall pattern (mirrored surprise!)
+      // Light world walls
       for (let r = 2; r < rows - 2; r++) {
         for (let c = 2; c < cols - 2; c++) {
           if (r < 4 && c < 4) continue;
           if (r > rows - 5 && c > cols - 5) continue;
-          // Inverse: where light has walls, shadow often doesn't (and vice versa)
+          if (rng() < wallChance) lightWalls.push({ x: ox + c * gs, y: lightY + r * gs, w: gs, h: gs });
+        }
+      }
+
+      // Shadow world walls (divergent!)
+      for (let r = 2; r < rows - 2; r++) {
+        for (let c = 2; c < cols - 2; c++) {
+          if (r < 4 && c < 4) continue;
+          if (r > rows - 5 && c > cols - 5) continue;
           const lightHasWall = lightWalls.some(w => w.x === ox + c * gs && w.y === lightY + r * gs);
           if (lightHasWall) {
             if (rng2() < 0.3) shadowWalls.push({ x: ox + c * gs, y: shadowY + r * gs, w: gs, h: gs });
@@ -212,7 +266,7 @@
         }
       }
 
-      // Spikes — only in ONE world each (the twist!)
+      // Spikes (only in ONE world each!)
       for (let r = 2; r < rows - 2; r++) {
         for (let c = 2; c < cols - 2; c++) {
           const lx = ox + c * gs, ly = lightY + r * gs;
@@ -220,9 +274,7 @@
           if (shadowWalls.some(w => w.x === lx && w.y === shadowY + r * gs)) continue;
           if (r < 4 && c < 4) continue;
           if (r > rows - 5 && c > cols - 5) continue;
-
           if (rng() < spikeChance) {
-            // Put spikes in only ONE world (randomly)
             if (rng() > 0.5) {
               lightSpikes.push({ x: lx + 2, y: ly + 2, w: gs - 4, h: gs - 4 });
             } else {
@@ -232,7 +284,7 @@
         }
       }
 
-      // Goals (mirrored position)
+      // Goals
       const goalC = cols - 3, goalR = rows - 3;
       lightGoal = { x: ox + goalC * gs, y: lightY + goalR * gs, w: gs, h: gs };
       shadowGoal = { x: ox + goalC * gs, y: shadowY + goalR * gs, w: gs, h: gs };
@@ -247,20 +299,20 @@
     }
 
     // ── Collision ──
-    function rectCollide(ax, ay, aw, ah, bx, by, bw, bh) {
+    function rectHit(ax, ay, aw, ah, bx, by, bw, bh) {
       return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
     }
 
     function isBlocked(nx, ny, walls) {
       for (const w of walls) {
-        if (rectCollide(nx, ny, PS, PS, w.x, w.y, w.w, w.h)) return true;
+        if (rectHit(nx, ny, PS, PS, w.x, w.y, w.w, w.h)) return true;
       }
       return false;
     }
 
     function hitsSpikes(x, y, spikes) {
       for (const s of spikes) {
-        if (rectCollide(x, y, PS, PS, s.x, s.y, s.w, s.h)) return true;
+        if (rectHit(x, y, PS, PS, s.x, s.y, s.w, s.h)) return true;
       }
       return false;
     }
@@ -271,67 +323,45 @@
       const nx = px + dx;
       const ny = py + dy;
 
-      const lightBlocked = isBlocked(nx, ny, lightWalls);
-      const shadowBlocked = isBlocked(nx, ny, shadowWalls);
+      if (isBlocked(nx, ny, lightWalls) && isBlocked(nx, ny, shadowWalls)) return;
 
-      // If blocked in BOTH worlds — can't move
-      if (lightBlocked && shadowBlocked) return;
-
-      // If blocked in one world but not the other — can still move (parallel dimension!)
       px = nx;
       py = ny;
 
-      // Check spikes in each world
-      if (hitsSpikes(px, py, lightSpikes) || hitsSpikes(px, py, shadowSpikes)) {
-        die();
-        return;
-      }
+      if (hitsSpikes(px, py, lightSpikes) || hitsSpikes(px, py, shadowSpikes)) { die(); return; }
 
-      // Check goals
-      if (!lightCollected && rectCollide(px, py, PS, PS, lightGoal.x, lightGoal.y, lightGoal.w, lightGoal.h)) {
-        lightCollected = true;
-      }
-      if (!shadowCollected && rectCollide(px, py, PS, PS, shadowGoal.x, shadowGoal.y, shadowGoal.w, shadowGoal.h)) {
-        shadowCollected = true;
-      }
+      if (!lightCollected && rectHit(px, py, PS, PS, lightGoal.x, lightGoal.y, lightGoal.w, lightGoal.h)) lightCollected = true;
+      if (!shadowCollected && rectHit(px, py, PS, PS, shadowGoal.x, shadowGoal.y, shadowGoal.w, shadowGoal.h)) shadowCollected = true;
 
-      // Both goals collected = level complete!
-      if (lightCollected && shadowCollected) {
-        level++;
-        loadLevel(level);
-      }
+      if (lightCollected && shadowCollected) { level++; loadLevel(level); }
     }
 
     function die() {
       deaths++;
       hudDeaths.textContent = `💀 ${deaths}`;
+      dpadStop();
       loadLevel(level);
-      // Flash
-      document.body.style.background = 'rgba(239,68,68,0.15)';
-      setTimeout(() => document.body.style.background = '#000', 150);
     }
 
     // ── Drawing ──
     function draw() {
       ctx.clearRect(0, 0, W, H);
-
       const pw = W * 0.9;
       const ox = (W - pw) / 2;
 
-      // ── LIGHT WORLD (top half) ──
-      // Background
+      // Light world background
       const lgr = ctx.createLinearGradient(0, 0, 0, H / 2);
       lgr.addColorStop(0, '#1a0a2e');
       lgr.addColorStop(1, '#2d1054');
       ctx.fillStyle = lgr;
       ctx.fillRect(0, 0, W, H / 2);
 
-      // Border glow
+      // Light border
       ctx.strokeStyle = 'rgba(196,77,255,0.3)';
       ctx.lineWidth = 1;
       ctx.strokeRect(ox - 1, LIGHT_TOP - 1, pw + 2, PLATE_H() + 2);
 
-      // Walls
+      // Light walls
       lightWalls.forEach(w => {
         ctx.fillStyle = '#3d1f6d';
         ctx.fillRect(w.x, w.y, w.w, w.h);
@@ -340,7 +370,7 @@
         ctx.strokeRect(w.x, w.y, w.w, w.h);
       });
 
-      // Spikes
+      // Light spikes
       lightSpikes.forEach(s => {
         ctx.fillStyle = '#ef4444';
         ctx.shadowColor = '#ef4444';
@@ -353,69 +383,51 @@
         ctx.shadowBlur = 0;
       });
 
-      // Goal
+      // Light goal
       if (lightGoal) {
         const pulse = Math.sin(frameCount * 0.08) * 0.3 + 0.7;
         ctx.fillStyle = lightCollected ? 'rgba(52,211,153,0.3)' : `rgba(52,211,153,${pulse * 0.4})`;
         ctx.fillRect(lightGoal.x, lightGoal.y, lightGoal.w, lightGoal.h);
-        if (!lightCollected) {
-          ctx.shadowColor = '#34d399';
-          ctx.shadowBlur = 12;
-          ctx.font = `${lightGoal.w * 0.7}px sans-serif`;
-          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-          ctx.fillText('✨', lightGoal.x + lightGoal.w / 2, lightGoal.y + lightGoal.h / 2);
-          ctx.shadowBlur = 0;
-        } else {
-          ctx.font = `${lightGoal.w * 0.7}px sans-serif`;
-          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-          ctx.fillText('✅', lightGoal.x + lightGoal.w / 2, lightGoal.y + lightGoal.h / 2);
-        }
+        ctx.font = `${lightGoal.w * 0.7}px sans-serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(lightCollected ? '✅' : '✨', lightGoal.x + lightGoal.w / 2, lightGoal.y + lightGoal.h / 2);
       }
 
-      // Player (light)
+      // Light player
       if (state === 'playing') {
-        ctx.shadowColor = '#c44dff';
-        ctx.shadowBlur = 15;
+        ctx.shadowColor = '#c44dff'; ctx.shadowBlur = 15;
         ctx.fillStyle = '#c44dff';
-        ctx.beginPath();
-        ctx.arc(px + PS / 2, LIGHT_TOP + py + PS / 2, PS / 2, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.beginPath(); ctx.arc(px + PS / 2, LIGHT_TOP + py + PS / 2, PS / 2, 0, Math.PI * 2); ctx.fill();
         ctx.fillStyle = '#fff';
-        ctx.beginPath();
-        ctx.arc(px + PS / 2, LIGHT_TOP + py + PS / 2, PS / 4, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.beginPath(); ctx.arc(px + PS / 2, LIGHT_TOP + py + PS / 2, PS / 4, 0, Math.PI * 2); ctx.fill();
         ctx.shadowBlur = 0;
       }
 
-      // Label
       ctx.fillStyle = 'rgba(196,77,255,0.5)';
       ctx.font = '600 0.65rem Inter, sans-serif';
       ctx.textAlign = 'left'; ctx.textBaseline = 'top';
       ctx.fillText('✨ LICHT', ox, LIGHT_TOP - 16);
 
-      // ── DIVIDER ──
+      // Divider
       ctx.strokeStyle = 'rgba(255,255,255,0.08)';
       ctx.lineWidth = 1;
       ctx.setLineDash([4, 8]);
-      ctx.beginPath();
-      ctx.moveTo(0, H / 2);
-      ctx.lineTo(W, H / 2);
-      ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, H / 2); ctx.lineTo(W, H / 2); ctx.stroke();
       ctx.setLineDash([]);
 
-      // ── SHADOW WORLD (bottom half) ──
+      // Shadow world background
       const sgr = ctx.createLinearGradient(0, H / 2, 0, H);
       sgr.addColorStop(0, '#0a1628');
       sgr.addColorStop(1, '#0a0a1a');
       ctx.fillStyle = sgr;
       ctx.fillRect(0, H / 2, W, H / 2);
 
-      // Border glow
+      // Shadow border
       ctx.strokeStyle = 'rgba(96,165,250,0.3)';
       ctx.lineWidth = 1;
       ctx.strokeRect(ox - 1, SHADOW_TOP() - 1, pw + 2, PLATE_H() + 2);
 
-      // Walls
+      // Shadow walls
       shadowWalls.forEach(w => {
         ctx.fillStyle = '#1a2a4a';
         ctx.fillRect(w.x, w.y, w.w, w.h);
@@ -424,11 +436,10 @@
         ctx.strokeRect(w.x, w.y, w.w, w.h);
       });
 
-      // Spikes
+      // Shadow spikes
       shadowSpikes.forEach(s => {
         ctx.fillStyle = '#f97316';
-        ctx.shadowColor = '#f97316';
-        ctx.shadowBlur = 6;
+        ctx.shadowColor = '#f97316'; ctx.shadowBlur = 6;
         ctx.beginPath();
         ctx.moveTo(s.x + s.w / 2, s.y);
         ctx.lineTo(s.x + s.w, s.y + s.h);
@@ -437,47 +448,32 @@
         ctx.shadowBlur = 0;
       });
 
-      // Goal
+      // Shadow goal
       if (shadowGoal) {
         const pulse = Math.sin(frameCount * 0.08) * 0.3 + 0.7;
         ctx.fillStyle = shadowCollected ? 'rgba(52,211,153,0.3)' : `rgba(52,211,153,${pulse * 0.4})`;
         ctx.fillRect(shadowGoal.x, shadowGoal.y, shadowGoal.w, shadowGoal.h);
-        if (!shadowCollected) {
-          ctx.shadowColor = '#34d399';
-          ctx.shadowBlur = 12;
-          ctx.font = `${shadowGoal.w * 0.7}px sans-serif`;
-          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-          ctx.fillText('✨', shadowGoal.x + shadowGoal.w / 2, shadowGoal.y + shadowGoal.h / 2);
-          ctx.shadowBlur = 0;
-        } else {
-          ctx.font = `${shadowGoal.w * 0.7}px sans-serif`;
-          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-          ctx.fillText('✅', shadowGoal.x + shadowGoal.w / 2, shadowGoal.y + shadowGoal.h / 2);
-        }
+        ctx.font = `${shadowGoal.w * 0.7}px sans-serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(shadowCollected ? '✅' : '✨', shadowGoal.x + shadowGoal.w / 2, shadowGoal.y + shadowGoal.h / 2);
       }
 
-      // Player (shadow)
+      // Shadow player
       if (state === 'playing') {
-        ctx.shadowColor = '#60a5fa';
-        ctx.shadowBlur = 15;
+        ctx.shadowColor = '#60a5fa'; ctx.shadowBlur = 15;
         ctx.fillStyle = '#60a5fa';
-        ctx.beginPath();
-        ctx.arc(px + PS / 2, SHADOW_TOP() + py + PS / 2, PS / 2, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.beginPath(); ctx.arc(px + PS / 2, SHADOW_TOP() + py + PS / 2, PS / 2, 0, Math.PI * 2); ctx.fill();
         ctx.fillStyle = '#1a2a4a';
-        ctx.beginPath();
-        ctx.arc(px + PS / 2, SHADOW_TOP() + py + PS / 2, PS / 4, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.beginPath(); ctx.arc(px + PS / 2, SHADOW_TOP() + py + PS / 2, PS / 4, 0, Math.PI * 2); ctx.fill();
         ctx.shadowBlur = 0;
       }
 
-      // Label
       ctx.fillStyle = 'rgba(96,165,250,0.5)';
       ctx.font = '600 0.65rem Inter, sans-serif';
       ctx.textAlign = 'left'; ctx.textBaseline = 'top';
       ctx.fillText('🌑 SCHATTEN', ox, SHADOW_TOP() - 16);
 
-      // ── Connection line between players ──
+      // Connection line
       if (state === 'playing') {
         const pulse = Math.sin(frameCount * 0.05) * 0.15 + 0.15;
         ctx.strokeStyle = `rgba(255,255,255,${pulse})`;
@@ -493,104 +489,21 @@
       frameCount++;
     }
 
-    // ── Game loop ──
-    function loop() {
-      draw();
-      requestAnimationFrame(loop);
-    }
+    function loop() { draw(); requestAnimationFrame(loop); }
     loop();
 
-    // ── Input handling ──
-    let moveInterval = null;
-    let lastMoveDir = null;
-
-    function startMoving(dx, dy) {
-      stopMoving();
-      lastMoveDir = { dx, dy };
-      tryMove(dx, dy);
-      moveInterval = setInterval(() => tryMove(dx, dy), 100);
-    }
-
-    function stopMoving() {
-      if (moveInterval) { clearInterval(moveInterval); moveInterval = null; }
-      lastMoveDir = null;
-    }
-
-    document.addEventListener('keydown', e => {
-      if (state !== 'playing') return;
-      const map = { ArrowUp: [0,-1], ArrowDown: [0,1], ArrowLeft: [-1,0], ArrowRight: [1,0],
-                     w: [0,-1], s: [0,1], a: [-1,0], d: [1,0] };
-      if (map[e.key]) {
-        e.preventDefault();
-        startMoving(map[e.key][0], map[e.key][1]);
-      }
-    });
-
-    document.addEventListener('keyup', e => {
-      const map = { ArrowUp: 1, ArrowDown: 1, ArrowLeft: 1, ArrowRight: 1, w: 1, s: 1, a: 1, d: 1 };
-      if (map[e.key]) stopMoving();
-    });
-
-    // Touch / swipe
-    let touchId = null;
-    canvas.addEventListener('touchstart', e => {
-      e.preventDefault();
-      if (state !== 'playing') return;
-      const t = e.touches[0];
-      touchStart = { x: t.clientX, y: t.clientY };
-      touchId = t.identifier;
-    }, { passive: false });
-
-    canvas.addEventListener('touchmove', e => {
-      e.preventDefault();
-      if (state !== 'playing' || !touchStart) return;
-      const t = Array.from(e.touches).find(tt => tt.identifier === touchId);
-      if (!t) return;
-      const dx = t.clientX - touchStart.x;
-      const dy = t.clientY - touchStart.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist > 10) {
-        const gs = W * 0.9 / Math.floor(W * 0.9 / 22); // grid size
-        const step = gs;
-        if (Math.abs(dx) > Math.abs(dy)) {
-          startMoving(dx > 0 ? step : -step, 0);
-        } else {
-          startMoving(0, dy > 0 ? step : -step);
-        }
-        touchStart = { x: t.clientX, y: t.clientY };
-      }
-    }, { passive: false });
-
-    canvas.addEventListener('touchend', e => {
-      for (const t of e.changedTouches) {
-        if (t.identifier === touchId) { stopMoving(); touchStart = null; touchId = null; }
-      }
-    });
-
-    // ── Start ──
+    // ── Start / Restart (inline onclick in HTML) ──
     function startGame() {
       level = 1; deaths = 0;
       state = 'playing';
       startScreen.classList.add('hidden');
       gameOverScreen.classList.add('hidden');
       hud.style.display = 'flex';
+      dpad.style.display = 'grid';
       hudLevel.textContent = '1';
       hudDeaths.textContent = '💀 0';
       loadLevel(level);
     }
-
-    function showGameOver() {
-      state = 'over';
-      hud.style.display = 'none';
-      document.getElementById('finalLevel').textContent = `Level ${level}`;
-      document.getElementById('finalStats').textContent = `${deaths} Tode · Du bist ein Schatten-Meister!`;
-      gameOverScreen.classList.remove('hidden');
-    }
-
-    const startBtn = document.getElementById('startBtn');
-    const restartBtn = document.getElementById('restartBtn');
-    startBtn.addEventListener('pointerdown', e => { e.stopPropagation(); startGame(); });
-    restartBtn.addEventListener('pointerdown', e => { e.stopPropagation(); startGame(); });
   </script>
 </body>
 </html>
