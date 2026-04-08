@@ -121,11 +121,12 @@
     <div class="subtitle">Spring über Hindernisse, sammle Kuchen und putz dein Einhorn!</div>
     <button class="play-btn" id="startBtn">🦄 Los geht's!</button>
     <div class="instructions">
-      <strong>Tippen / Leertaste</strong> zum Springen<br>
+      <strong>Tippen / Leertaste</strong> zum Fliegen & Springen<br>
       <strong>🧁 Kuchen einsammeln</strong> für Bonus-Punkte<br>
+      <strong>🌈 Regenbogen</strong> = 3s Unverwundbarkeit!<br>
       <strong>3 Kuchen = Level geschafft!</strong><br>
-      Nach jedem Level: <strong>🛁 Einhorn putzen</strong> zum Aufräumen<br>
-      Werden die Levels schneller und härter! 🚀
+      Achtung: ⛈️🦇🐉 Hindernisse in der Luft!<br>
+      Nach jedem Level: <strong>🛁 Einhorn putzen</strong>
     </div>
   </div>
 
@@ -167,6 +168,9 @@
     // World
     let obstacles = [];
     let cakes = [];
+    let rainbows = []; // power-ups
+    let rainbowActive = 0; // frames remaining
+    let rainbowTimer = 0;
     let particles = [];
     let bubbles = []; // for bath
     let bgStars = [];
@@ -202,27 +206,32 @@
 
     // ── Obstacle types ──
     const OBS_TYPES = [
-      { type: 'rock', w: 0.04, h: 0.06, color: '#4a3728', emoji: '🪨' },
-      { type: 'cactus', w: 0.03, h: 0.08, color: '#2d6a4f', emoji: '🌵' },
-      { type: 'fence', w: 0.06, h: 0.05, color: '#8b6914', emoji: '🪵' },
-      { type: 'mushroom', w: 0.035, h: 0.05, color: '#c44dff', emoji: '🍄' },
+      { type: 'rock', w: 0.04, h: 0.06, color: '#4a3728', emoji: '🪨', ground: true },
+      { type: 'cactus', w: 0.03, h: 0.08, color: '#2d6a4f', emoji: '🌵', ground: true },
+      { type: 'fence', w: 0.06, h: 0.05, color: '#8b6914', emoji: '🪵', ground: true },
+      { type: 'mushroom', w: 0.035, h: 0.05, color: '#c44dff', emoji: '🍄', ground: true },
+      { type: 'cloud', w: 0.08, h: 0.035, color: '#60a5fa', emoji: '⛈️', ground: false },
+      { type: 'bat', w: 0.05, h: 0.04, color: '#1e1e2a', emoji: '🦇', ground: false },
+      { type: 'dragon', w: 0.06, h: 0.045, color: '#ef4444', emoji: '🐉', ground: false },
     ];
 
     function spawnObstacle() {
       const t = OBS_TYPES[Math.floor(Math.random() * OBS_TYPES.length)];
+      const isAir = !t.ground && level >= 2 && Math.random() > 0.4;
+      let oy;
+      if (isAir) {
+        oy = H * 0.12 + Math.random() * (getGround() - H * 0.35);
+      } else {
+        oy = getGround() - H * t.h;
+      }
       obstacles.push({
-        x: W + 20,
-        y: getGround() - H * t.h,
-        w: W * t.w,
-        h: H * t.h,
-        emoji: t.emoji,
-        color: t.color,
-        passed: false,
+        x: W + 20, y: oy, w: W * t.w, h: H * t.h,
+        emoji: t.emoji, color: t.color, passed: false, air: isAir,
       });
     }
 
     function spawnCake() {
-      const minY = getGround() - H * 0.35;
+      const minY = H * 0.08;
       const maxY = getGround() - uni.h - 20;
       cakes.push({
         x: W + 20,
@@ -439,7 +448,8 @@
       score = 0; level = 1; cakesCollected = 0; totalCakes = 0;
       gameSpeed = 3.5; uni.dirtiness = 0;
       uni.y = getGround() - uni.h; uni.vy = 0; uni.onGround = true;
-      obstacles = []; cakes = []; particles = [];
+      obstacles = []; cakes = []; particles = []; rainbows = [];
+      rainbowActive = 0; rainbowTimer = 0;
       obstacleTimer = 0; cakeTimer = 0; frameCount = 0;
       state = 'playing';
       startScreen.classList.add('hidden');
@@ -523,15 +533,26 @@
         spawnCake();
       }
 
+      // Spawn rainbow power-up (rare)
+      rainbowTimer++;
+      if (rainbowTimer > 350 + Math.random() * 200) {
+        rainbowTimer = 0;
+        const ry = H * 0.1 + Math.random() * (getGround() - H * 0.25);
+        rainbows.push({ x: W + 20, y: ry, r: W * 0.025, bob: 0, collected: false });
+      }
+
+      // Rainbow active timer
+      if (rainbowActive > 0) rainbowActive--;
+
       // Move obstacles
       for (let i = obstacles.length - 1; i >= 0; i--) {
         obstacles[i].x -= gameSpeed;
         if (obstacles[i].x + obstacles[i].w < 0) { obstacles.splice(i, 1); continue; }
 
-        // Collision (simple AABB)
+        // Collision (simple AABB) — invincible during rainbow
         const o = obstacles[i];
         const margin = 5;
-        if (uni.x + margin < o.x + o.w && uni.x + uni.w - margin > o.x &&
+        if (rainbowActive <= 0 && uni.x + margin < o.x + o.w && uni.x + uni.w - margin > o.x &&
             uni.y + margin < o.y + o.h && uni.y + uni.h - margin > o.y) {
           gameOver();
           return;
@@ -540,8 +561,24 @@
         // Score for passing
         if (!o.passed && o.x + o.w < uni.x) {
           o.passed = true;
-          score += 10;
+          score += rainbowActive > 0 ? 20 : 10;
+          if (rainbowActive > 0) addParticle(o.x, o.y, '#fbbf24', '⚡', 3);
           updateHud();
+        }
+      }
+
+      // Move rainbows
+      for (let i = rainbows.length - 1; i >= 0; i--) {
+        rainbows[i].x -= gameSpeed;
+        rainbows[i].bob += 0.06;
+        if (rainbows[i].x < -20) { rainbows.splice(i, 1); continue; }
+        const r = rainbows[i];
+        const dx = (uni.x + uni.w / 2) - r.x;
+        const dy = (uni.y + uni.h / 2) - r.y;
+        if (Math.sqrt(dx * dx + dy * dy) < uni.w / 2 + r.r) {
+          rainbows.splice(i, 1);
+          rainbowActive = 180; // 3 seconds
+          addParticle(r.x, r.y, '#fbbf24', '🌈', 12);
         }
       }
 
@@ -590,8 +627,27 @@
       // Cakes
       cakes.forEach(drawCake);
 
-      // Unicorn
-      drawUnicorn(uni.x, uni.y, uni.w, uni.h, uni.dirtiness);
+      // Rainbow power-ups
+      rainbows.forEach(r => {
+        const bobY = Math.sin(r.bob) * 5;
+        ctx.shadowColor = '#fbbf24';
+        ctx.shadowBlur = 18;
+        ctx.font = `${r.r * 3.5}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🌈', r.x, r.y + bobY);
+        ctx.shadowBlur = 0;
+      });
+
+      // Unicorn (with rainbow glow)
+      if (rainbowActive > 0) {
+        ctx.shadowColor = '#fbbf24';
+        ctx.shadowBlur = 25 + Math.sin(frameCount * 0.15) * 10;
+        drawUnicorn(uni.x, uni.y, uni.w, uni.h, uni.dirtiness);
+        ctx.shadowBlur = 0;
+      } else {
+        drawUnicorn(uni.x, uni.y, uni.w, uni.h, uni.dirtiness);
+      }
 
       // Particles
       particles.forEach(p => {
