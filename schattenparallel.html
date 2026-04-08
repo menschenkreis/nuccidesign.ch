@@ -589,10 +589,8 @@
 
     const startBtn = document.getElementById('startBtn');
     const restartBtn = document.getElementById('restartBtn');
-    startBtn.addEventListener('click', startGame);
-    restartBtn.addEventListener('click', startGame);
-    startBtn.addEventListener('touchend', e => { e.preventDefault(); startGame(); });
-    restartBtn.addEventListener('touchend', e => { e.preventDefault(); startGame(); });
+    startBtn.addEventListener('pointerdown', e => { e.stopPropagation(); startGame(); });
+    restartBtn.addEventListener('pointerdown', e => { e.stopPropagation(); startGame(); });
   </script>
 </body>
 </html>
