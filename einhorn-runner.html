@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Einhorn Runner — NucciDesigner</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap');
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: 'Inter', sans-serif; background: #0a0a0f; color: #e8e8ed;
+      overflow: hidden; height: 100vh; height: 100dvh;
+      -webkit-font-smoothing: antialiased; touch-action: none; user-select: none;
+    }
+
+    canvas { display: block; width: 100%; height: 100%; }
+
+    .overlay {
+      position: fixed; inset: 0; z-index: 10;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.75); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      transition: opacity 0.4s; padding: 20px;
+    }
+    .overlay.hidden { opacity: 0; pointer-events: none; }
+
+    .title { font-size: clamp(2rem, 8vw, 3.5rem); font-weight: 900; letter-spacing: -0.04em; text-align: center; margin-bottom: 8px; }
+    .title .e { display: inline-block; animation: float 2s ease-in-out infinite; }
+    @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+    .subtitle { color: rgba(255,255,255,0.5); font-size: 0.85rem; text-align: center; margin-bottom: 24px; line-height: 1.5; max-width: 340px; }
+
+    .play-btn {
+      padding: 16px 48px; border-radius: 100px; border: none;
+      background: linear-gradient(135deg, #c44dff, #ff6b9d); color: white;
+      font-size: 1rem; font-weight: 800; font-family: 'Inter', sans-serif;
+      cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .play-btn:hover { transform: scale(1.05); box-shadow: 0 8px 30px rgba(196,77,255,0.4); }
+    .play-btn:active { transform: scale(0.95); }
+
+    .instructions { color: rgba(255,255,255,0.4); font-size: 0.72rem; margin-top: 20px; text-align: center; line-height: 1.8; max-width: 300px; }
+    .instructions strong { color: rgba(255,255,255,0.6); }
+
+    .back-link {
+      position: fixed; top: 16px; left: 16px; z-index: 20;
+      color: rgba(255,255,255,0.4); text-decoration: none; font-size: 0.82rem; font-weight: 600;
+      padding: 8px 14px; border-radius: 100px; border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(0,0,0,0.3); backdrop-filter: blur(8px); transition: all 0.2s;
+    }
+    .back-link:hover { color: white; border-color: rgba(255,255,255,0.3); }
+
+    .hud {
+      position: fixed; top: 16px; left: 16px; right: 16px; z-index: 20;
+      display: flex; justify-content: space-between; align-items: center;
+      font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;
+      pointer-events: none;
+    }
+    .hud .left, .hud .right { display: flex; gap: 14px; align-items: center; }
+    .hud .badge {
+      padding: 6px 14px; border-radius: 100px;
+      background: rgba(0,0,0,0.4); backdrop-filter: blur(8px);
+      color: rgba(255,255,255,0.7); font-weight: 700;
+    }
+    .hud .badge .val { color: #c44dff; }
+    .hud .badge .val.cake { color: #fbbf24; }
+
+    /* Bath screen */
+    .bath-overlay {
+      position: fixed; inset: 0; z-index: 15;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: rgba(10,20,40,0.95); backdrop-filter: blur(6px);
+      transition: opacity 0.5s; padding: 20px;
+    }
+    .bath-overlay.hidden { opacity: 0; pointer-events: none; }
+    .bath-title { font-size: 1.5rem; font-weight: 900; margin-bottom: 4px; }
+    .bath-sub { color: rgba(255,255,255,0.5); font-size: 0.8rem; margin-bottom: 20px; }
+    .bath-progress {
+      width: 80%; max-width: 300px; height: 24px; border-radius: 12px;
+      background: rgba(255,255,255,0.1); overflow: hidden; margin-bottom: 16px;
+      border: 2px solid rgba(255,255,255,0.1);
+    }
+    .bath-progress .fill {
+      height: 100%; border-radius: 10px; transition: width 0.15s;
+      background: linear-gradient(90deg, #60a5fa, #a78bfa, #f472b6);
+    }
+    .bath-pct { font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; font-weight: 700; color: #60a5fa; margin-bottom: 8px; }
+    .bath-hint { color: rgba(255,255,255,0.35); font-size: 0.7rem; }
+
+    .game-over .score-final { font-family: 'JetBrains Mono', monospace; font-size: 2rem; font-weight: 900; color: #c44dff; margin: 8px 0; }
+    .game-over .stats { color: rgba(255,255,255,0.5); font-size: 0.82rem; margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <a href="index.html" class="back-link">← Zrugg</a>
+
+  <div class="hud" id="hud" style="display:none;">
+    <div class="left">
+      <div class="badge">Level <span class="val" id="hudLevel">1</span></div>
+      <div class="badge">🧁 <span class="val cake" id="hudCakes">0/3</span></div>
+    </div>
+    <div class="right">
+      <div class="badge">⭐ <span class="val" id="hudScore">0</span></div>
+    </div>
+  </div>
+
+  <canvas id="game"></canvas>
+
+  <!-- Bath screen -->
+  <div class="bath-overlay hidden" id="bathScreen">
+    <div class="bath-title">🛁 Einhorn-Pflege!</div>
+    <div class="bath-sub">Putz das Einhorn, bevor es weitergeht</div>
+    <div class="bath-pct" id="bathPct">0%</div>
+    <div class="bath-progress"><div class="fill" id="bathFill" style="width:0%"></div></div>
+    <div class="bath-hint">Tippe oder klicke schnell zum Putzen!</div>
+  </div>
+
+  <!-- Start -->
+  <div class="overlay" id="startScreen">
+    <div class="title"><span class="e">🦄</span> Einhorn<br>Runner</div>
+    <div class="subtitle">Spring über Hindernisse, sammle Kuchen und putz dein Einhorn!</div>
+    <button class="play-btn" id="startBtn">🦄 Los geht's!</button>
+    <div class="instructions">
+      <strong>Tippen / Leertaste</strong> zum Springen<br>
+      <strong>🧁 Kuchen einsammeln</strong> für Bonus-Punkte<br>
+      <strong>3 Kuchen = Level geschafft!</strong><br>
+      Nach jedem Level: <strong>🛁 Einhorn putzen</strong> zum Aufräumen<br>
+      Werden die Levels schneller und härter! 🚀
+    </div>
+  </div>
+
+  <!-- Game Over -->
+  <div class="overlay hidden game-over" id="gameOver">
+    <div class="title">😴 Oh nee!</div>
+    <div class="score-final" id="finalScore">0</div>
+    <div class="stats" id="finalStats"></div>
+    <button class="play-btn" id="restartBtn">🔄 Nochmal</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const hud = document.getElementById('hud');
+    const hudLevel = document.getElementById('hudLevel');
+    const hudCakes = document.getElementById('hudCakes');
+    const hudScore = document.getElementById('hudScore');
+    const bathScreen = document.getElementById('bathScreen');
+    const bathFill = document.getElementById('bathFill');
+    const bathPct = document.getElementById('bathPct');
+    const startScreen = document.getElementById('startScreen');
+    const gameOverScreen = document.getElementById('gameOver');
+
+    let W, H, dpr;
+    let state = 'menu'; // menu, playing, bathing, over
+    let score = 0, level = 1, cakesCollected = 0, cakesNeeded = 3, totalCakes = 0;
+    let bathProgress = 0;
+    const BATH_NEEDED = 100;
+
+    // Physics
+    const GRAVITY = 0.55;
+    let gameSpeed = 3.5;
+
+    // Unicorn
+    let uni = { x: 0, y: 0, vy: 0, w: 0, h: 0, onGround: true, dirtiness: 0 };
+    let jumpPressed = false;
+
+    // World
+    let obstacles = [];
+    let cakes = [];
+    let particles = [];
+    let bubbles = []; // for bath
+    let bgStars = [];
+    let groundOffset = 0;
+
+    // Timers
+    let obstacleTimer = 0;
+    let cakeTimer = 0;
+    let frameCount = 0;
+
+    function resize() {
+      dpr = window.devicePixelRatio || 1;
+      W = window.innerWidth;
+      H = window.innerHeight;
+      canvas.width = W * dpr;
+      canvas.height = H * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      uni.w = W * 0.08;
+      uni.h = W * 0.09;
+      uni.x = W * 0.15;
+      if (state === 'menu') uni.y = getGround() - uni.h;
+    }
+
+    function getGround() { return H * 0.82; }
+
+    resize();
+    window.addEventListener('resize', resize);
+
+    // Stars
+    for (let i = 0; i < 60; i++) {
+      bgStars.push({ x: Math.random() * 2000, y: Math.random() * H * 0.7, r: Math.random() * 1.5 + 0.3, twinkle: Math.random() * Math.PI * 2 });
+    }
+
+    // ── Obstacle types ──
+    const OBS_TYPES = [
+      { type: 'rock', w: 0.04, h: 0.06, color: '#4a3728', emoji: '🪨' },
+      { type: 'cactus', w: 0.03, h: 0.08, color: '#2d6a4f', emoji: '🌵' },
+      { type: 'fence', w: 0.06, h: 0.05, color: '#8b6914', emoji: '🪵' },
+      { type: 'mushroom', w: 0.035, h: 0.05, color: '#c44dff', emoji: '🍄' },
+    ];
+
+    function spawnObstacle() {
+      const t = OBS_TYPES[Math.floor(Math.random() * OBS_TYPES.length)];
+      obstacles.push({
+        x: W + 20,
+        y: getGround() - H * t.h,
+        w: W * t.w,
+        h: H * t.h,
+        emoji: t.emoji,
+        color: t.color,
+        passed: false,
+      });
+    }
+
+    function spawnCake() {
+      const minY = getGround() - H * 0.35;
+      const maxY = getGround() - uni.h - 20;
+      cakes.push({
+        x: W + 20,
+        y: minY + Math.random() * (maxY - minY),
+        r: W * 0.02,
+        collected: false,
+        bob: Math.random() * Math.PI * 2,
+      });
+    }
+
+    function addParticle(x, y, color, emoji = '', count = 6) {
+      for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Math.random() * 3 + 1;
+        particles.push({
+          x, y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed - 2,
+          life: 1,
+          decay: Math.random() * 0.03 + 0.02,
+          r: Math.random() * 3 + 1,
+          color,
+          emoji: emoji ? (Math.random() > 0.5 ? emoji : '') : '',
+        });
+      }
+    }
+
+    // ── Drawing helpers ──
+    function drawUnicorn(x, y, w, h, dirtiness) {
+      ctx.save();
+      // Body
+      const bodyH = h * 0.55;
+      const bodyY = y + h * 0.25;
+
+      // Dirt overlay
+      if (dirtiness > 0) {
+        ctx.fillStyle = `rgba(139, 115, 85, ${dirtiness * 0.4})`;
+        ctx.beginPath();
+        ctx.ellipse(x + w * 0.5, bodyY + bodyH * 0.5, w * 0.5, bodyH * 0.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Legs (animated)
+      const legAnim = Math.sin(frameCount * 0.15) * (state === 'playing' ? 6 : 0);
+      ctx.fillStyle = '#f0c8e8';
+      ctx.fillRect(x + w * 0.15, y + h * 0.7, w * 0.12, h * 0.3 + legAnim);
+      ctx.fillRect(x + w * 0.35, y + h * 0.7, w * 0.12, h * 0.3 - legAnim);
+      ctx.fillRect(x + w * 0.55, y + h * 0.7, w * 0.12, h * 0.3 + legAnim);
+      ctx.fillRect(x + w * 0.75, y + h * 0.7, w * 0.12, h * 0.3 - legAnim);
+
+      // Body
+      ctx.fillStyle = '#f5d5f0';
+      ctx.beginPath();
+      ctx.ellipse(x + w * 0.5, bodyY + bodyH * 0.4, w * 0.45, bodyH * 0.45, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Neck + Head
+      ctx.fillStyle = '#f5d5f0';
+      ctx.beginPath();
+      ctx.ellipse(x + w * 0.78, y + h * 0.15, w * 0.2, h * 0.18, -0.3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Eye
+      ctx.fillStyle = '#333';
+      ctx.beginPath();
+      ctx.arc(x + w * 0.85, y + h * 0.12, w * 0.04, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(x + w * 0.86, y + h * 0.11, w * 0.015, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Horn
+      const grad = ctx.createLinearGradient(x + w * 0.82, y - h * 0.05, x + w * 0.82, y + h * 0.12);
+      grad.addColorStop(0, '#fbbf24');
+      grad.addColorStop(1, '#f59e0b');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(x + w * 0.78, y + h * 0.1);
+      ctx.lineTo(x + w * 0.82, y - h * 0.12);
+      ctx.lineTo(x + w * 0.86, y + h * 0.1);
+      ctx.fill();
+
+      // Sparkle on horn
+      if (frameCount % 30 < 15) {
+        ctx.fillStyle = '#fff';
+        ctx.font = `${w * 0.12}px sans-serif`;
+        ctx.fillText('✨', x + w * 0.72, y);
+      }
+
+      // Mane
+      ctx.fillStyle = '#c44dff';
+      for (let i = 0; i < 4; i++) {
+        const mx = x + w * (0.6 + i * 0.05);
+        const my = y + h * (0.05 + i * 0.05);
+        const wave = Math.sin(frameCount * 0.08 + i) * 3;
+        ctx.beginPath();
+        ctx.arc(mx + wave, my, w * 0.06, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Tail
+      ctx.fillStyle = '#c44dff';
+      const tailWave = Math.sin(frameCount * 0.1) * 5;
+      ctx.beginPath();
+      ctx.ellipse(x - w * 0.05, y + h * 0.35 + tailWave, w * 0.12, w * 0.06, -0.5 + tailWave * 0.02, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Dirt spots
+      if (dirtiness > 20) {
+        ctx.fillStyle = `rgba(101, 67, 33, ${Math.min(dirtiness / 200, 0.5)})`;
+        ctx.beginPath(); ctx.arc(x + w * 0.3, y + h * 0.5, w * 0.06, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x + w * 0.6, y + h * 0.4, w * 0.05, 0, Math.PI * 2); ctx.fill();
+      }
+      if (dirtiness > 50) {
+        ctx.fillStyle = `rgba(101, 67, 33, ${Math.min(dirtiness / 200, 0.4)})`;
+        ctx.beginPath(); ctx.arc(x + w * 0.45, y + h * 0.6, w * 0.07, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x + w * 0.75, y + h * 0.55, w * 0.04, 0, Math.PI * 2); ctx.fill();
+      }
+
+      ctx.restore();
+    }
+
+    function drawBackground() {
+      // Sky gradient
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, getGround());
+      skyGrad.addColorStop(0, '#0a0a1a');
+      skyGrad.addColorStop(0.5, '#1a1035');
+      skyGrad.addColorStop(1, '#2d1b69');
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, W, getGround());
+
+      // Stars
+      bgStars.forEach(s => {
+        s.twinkle += 0.02;
+        const alpha = 0.3 + Math.sin(s.twinkle) * 0.3;
+        ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+        ctx.beginPath();
+        ctx.arc(s.x % W, s.y, s.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Moon
+      ctx.fillStyle = '#fde68a';
+      ctx.shadowColor = '#fde68a';
+      ctx.shadowBlur = 40;
+      ctx.beginPath();
+      ctx.arc(W * 0.8, H * 0.15, W * 0.04, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // Ground
+      const groundGrad = ctx.createLinearGradient(0, getGround(), 0, H);
+      groundGrad.addColorStop(0, '#2d5a1e');
+      groundGrad.addColorStop(1, '#1a3a12');
+      ctx.fillStyle = groundGrad;
+      ctx.fillRect(0, getGround(), W, H - getGround());
+
+      // Grass line
+      ctx.strokeStyle = '#4ade80';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, getGround());
+      ctx.lineTo(W, getGround());
+      ctx.stroke();
+
+      // Moving grass blades
+      ctx.strokeStyle = 'rgba(74, 222, 128, 0.4)';
+      ctx.lineWidth = 1.5;
+      for (let i = 0; i < 30; i++) {
+        const gx = ((i * W / 30) - groundOffset * 0.5) % W;
+        const wave = Math.sin(frameCount * 0.03 + i) * 4;
+        ctx.beginPath();
+        ctx.moveTo(gx < 0 ? gx + W : gx, getGround());
+        ctx.lineTo(gx < 0 ? gx + W - 3 : gx - 3, getGround() - 8 + wave);
+        ctx.stroke();
+      }
+    }
+
+    function drawObstacle(o) {
+      ctx.font = `${o.w * 1.2}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(o.emoji, o.x + o.w / 2, o.y + o.h);
+    }
+
+    function drawCake(c) {
+      c.bob += 0.05;
+      const bobY = Math.sin(c.bob) * 4;
+      ctx.font = `${c.r * 3}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      // Glow
+      ctx.shadowColor = '#fbbf24';
+      ctx.shadowBlur = 12;
+      ctx.fillText('🧁', c.x, c.y + bobY);
+      ctx.shadowBlur = 0;
+    }
+
+    // ── Game logic ──
+    function jump() {
+      if (uni.onGround && state === 'playing') {
+        uni.vy = -12;
+        uni.onGround = false;
+        addParticle(uni.x + uni.w / 2, getGround(), '#a78bfa', '', 4);
+      }
+    }
+
+    function startGame() {
+      score = 0; level = 1; cakesCollected = 0; totalCakes = 0;
+      gameSpeed = 3.5; uni.dirtiness = 0;
+      uni.y = getGround() - uni.h; uni.vy = 0; uni.onGround = true;
+      obstacles = []; cakes = []; particles = [];
+      obstacleTimer = 0; cakeTimer = 0; frameCount = 0;
+      state = 'playing';
+      startScreen.classList.add('hidden');
+      gameOverScreen.classList.add('hidden');
+      bathScreen.classList.add('hidden');
+      hud.style.display = 'flex';
+      updateHud();
+    }
+
+    function updateHud() {
+      hudLevel.textContent = level;
+      hudCakes.textContent = `${cakesCollected}/${cakesNeeded}`;
+      hudScore.textContent = score;
+    }
+
+    function startBath() {
+      state = 'bathing';
+      bathProgress = 0;
+      bathScreen.classList.remove('hidden');
+      bubbles = [];
+      updateBath();
+    }
+
+    function updateBath() {
+      bathFill.style.width = bathProgress + '%';
+      bathPct.textContent = Math.floor(bathProgress) + '%';
+      if (bathProgress >= BATH_NEEDED) {
+        bathScreen.classList.add('hidden');
+        level++;
+        cakesCollected = 0;
+        cakesNeeded = Math.min(3 + Math.floor(level / 2), 8);
+        gameSpeed = 3.5 + level * 0.4;
+        uni.dirtiness = 0;
+        obstacles = []; cakes = [];
+        obstacleTimer = 0; cakeTimer = 0;
+        state = 'playing';
+        updateHud();
+      }
+    }
+
+    function gameOver() {
+      state = 'over';
+      hud.style.display = 'none';
+      bathScreen.classList.add('hidden');
+      document.getElementById('finalScore').textContent = score;
+      document.getElementById('finalStats').textContent = `Level ${level} · ${totalCakes} Kuchen gesammelt`;
+      gameOverScreen.classList.remove('hidden');
+      addParticle(uni.x + uni.w / 2, uni.y + uni.h / 2, '#f472b6', '💔', 15);
+    }
+
+    // ── Update ──
+    function update() {
+      frameCount++;
+      groundOffset += gameSpeed;
+
+      // Unicorn physics
+      uni.vy += GRAVITY;
+      uni.y += uni.vy;
+      const ground = getGround() - uni.h;
+      if (uni.y >= ground) {
+        uni.y = ground;
+        uni.vy = 0;
+        uni.onGround = true;
+      }
+
+      // Dirt increases over time
+      uni.dirtiness = Math.min(100, uni.dirtiness + 0.015 * (level * 0.5));
+
+      // Spawn obstacles
+      obstacleTimer++;
+      const spawnRate = Math.max(60, 120 - level * 8);
+      if (obstacleTimer > spawnRate + Math.random() * 40) {
+        obstacleTimer = 0;
+        spawnObstacle();
+      }
+
+      // Spawn cakes
+      cakeTimer++;
+      if (cakeTimer > 80 + Math.random() * 60 && cakesCollected < cakesNeeded) {
+        cakeTimer = 0;
+        spawnCake();
+      }
+
+      // Move obstacles
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        obstacles[i].x -= gameSpeed;
+        if (obstacles[i].x + obstacles[i].w < 0) { obstacles.splice(i, 1); continue; }
+
+        // Collision (simple AABB)
+        const o = obstacles[i];
+        const margin = 5;
+        if (uni.x + margin < o.x + o.w && uni.x + uni.w - margin > o.x &&
+            uni.y + margin < o.y + o.h && uni.y + uni.h - margin > o.y) {
+          gameOver();
+          return;
+        }
+
+        // Score for passing
+        if (!o.passed && o.x + o.w < uni.x) {
+          o.passed = true;
+          score += 10;
+          updateHud();
+        }
+      }
+
+      // Move cakes
+      for (let i = cakes.length - 1; i >= 0; i--) {
+        cakes[i].x -= gameSpeed;
+        if (cakes[i].x < -20) { cakes.splice(i, 1); continue; }
+
+        const c = cakes[i];
+        const dx = (uni.x + uni.w / 2) - c.x;
+        const dy = (uni.y + uni.h / 2) - c.y;
+        if (Math.sqrt(dx * dx + dy * dy) < uni.w / 2 + c.r) {
+          cakes.splice(i, 1);
+          cakesCollected++;
+          totalCakes++;
+          score += 50;
+          addParticle(c.x, c.y, '#fbbf24', '🧁', 8);
+          updateHud();
+
+          // Level complete?
+          if (cakesCollected >= cakesNeeded) {
+            startBath();
+            return;
+          }
+        }
+      }
+
+      // Particles
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx; p.y += p.vy;
+        p.vy += 0.08;
+        p.life -= p.decay;
+        if (p.life <= 0) particles.splice(i, 1);
+      }
+    }
+
+    // ── Draw ──
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+      drawBackground();
+
+      // Obstacles
+      obstacles.forEach(drawObstacle);
+
+      // Cakes
+      cakes.forEach(drawCake);
+
+      // Unicorn
+      drawUnicorn(uni.x, uni.y, uni.w, uni.h, uni.dirtiness);
+
+      // Particles
+      particles.forEach(p => {
+        ctx.globalAlpha = p.life;
+        if (p.emoji) {
+          ctx.font = `${p.r * 4}px sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.fillText(p.emoji, p.x, p.y);
+        } else {
+          ctx.fillStyle = p.color;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+      ctx.globalAlpha = 1;
+
+      // Bath bubbles on screen
+      if (state === 'bathing') {
+        bubbles.forEach((b, i) => {
+          b.y -= b.vy;
+          b.x += Math.sin(frameCount * 0.03 + i) * 0.5;
+          b.life -= 0.008;
+          if (b.life <= 0) { bubbles.splice(i, 1); return; }
+          ctx.globalAlpha = b.life * 0.6;
+          ctx.fillStyle = '#60a5fa';
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(167,139,250,0.3)';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        });
+        ctx.globalAlpha = 1;
+
+        // Draw sparkly unicorn in bath
+        const bx = W / 2 - uni.w;
+        const by = H * 0.35;
+        drawUnicorn(bx, by, uni.w * 2, uni.h * 2, Math.max(0, uni.dirtiness - bathProgress * 0.5));
+
+        // Water line
+        ctx.fillStyle = 'rgba(96, 165, 250, 0.15)';
+        ctx.fillRect(0, H * 0.5, W, H * 0.5);
+
+        // Sparkles
+        if (frameCount % 5 === 0) {
+          bubbles.push({
+            x: W * 0.3 + Math.random() * W * 0.4,
+            y: H * 0.6 + Math.random() * H * 0.2,
+            vy: Math.random() * 1.5 + 0.5,
+            r: Math.random() * 8 + 3,
+            life: 1,
+          });
+        }
+      }
+    }
+
+    // ── Loop ──
+    function loop() {
+      if (state === 'playing') update();
+      draw();
+      requestAnimationFrame(loop);
+    }
+    loop();
+
+    // ── Input ──
+    function handleTap() {
+      if (state === 'playing') jump();
+      if (state === 'bathing') {
+        bathProgress = Math.min(BATH_NEEDED, bathProgress + 2.5);
+        addParticle(W * 0.3 + Math.random() * W * 0.4, H * 0.55, '#60a5fa', '🫧', 3);
+        updateBath();
+      }
+    }
+
+    canvas.addEventListener('touchstart', e => { e.preventDefault(); handleTap(); }, { passive: false });
+    canvas.addEventListener('mousedown', handleTap);
+    document.addEventListener('keydown', e => {
+      if (e.code === 'Space' || e.code === 'ArrowUp') { e.preventDefault(); handleTap(); }
+    });
+
+    document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('restartBtn').addEventListener('click', startGame);
+  </script>
+</body>
+</html>
