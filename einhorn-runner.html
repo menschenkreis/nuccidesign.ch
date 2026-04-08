@@ -424,10 +424,14 @@
 
     // ── Game logic ──
     function jump() {
-      if (uni.onGround && state === 'playing') {
-        uni.vy = -12;
-        uni.onGround = false;
-        addParticle(uni.x + uni.w / 2, getGround(), '#a78bfa', '', 4);
+      if (state === 'playing') {
+        uni.vy = -8;
+        if (uni.onGround) {
+          uni.onGround = false;
+          addParticle(uni.x + uni.w / 2, getGround(), '#a78bfa', '', 4);
+        } else {
+          addParticle(uni.x + uni.w / 2, uni.y + uni.h, '#c4b5fd', '✨', 2);
+        }
       }
     }
 
