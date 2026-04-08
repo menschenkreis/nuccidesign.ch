@@ -21,7 +21,6 @@
     .m.l{align-self:flex-start;background:rgba(255,255,255,.07);border-bottom-left-radius:6px}
     .m.r{align-self:flex-end;background:linear-gradient(135deg,#c44dff,#7c6aef);border-bottom-right-radius:6px;color:#fff}
     .m .t{font-size:.55rem;opacity:.35;margin-top:3px;display:block}
-    .m .ai{font-size:.5rem;opacity:.2;margin-top:2px;display:block;text-align:right}
     .ty{align-self:flex-start;padding:10px 16px;font-size:.8rem;color:rgba(255,255,255,.3)}
     .eb{display:flex;gap:4px;padding:6px 16px 6px;overflow-x:auto;flex-shrink:0}
     .eb::-webkit-scrollbar{display:none}
@@ -30,7 +29,6 @@
     .ib input{flex:1;padding:12px 18px;border-radius:100px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.05);color:#e8e8ed;font-size:.84rem;font-family:'Inter',sans-serif;outline:none;-webkit-appearance:none}
     .ib input::placeholder{color:rgba(255,255,255,.2)}
     .ib button{width:44px;height:44px;border-radius:50%;border:none;background:linear-gradient(135deg,#c44dff,#7c6aef);color:#fff;font-size:1.1rem;cursor:pointer;flex-shrink:0}
-    .mode-tag{font-size:.5rem;padding:2px 6px;border-radius:4px;background:rgba(96,165,250,.15);color:#60a5fa;display:inline-block;margin-left:6px;vertical-align:middle}
   </style>
 </head>
 <body>
@@ -62,92 +60,63 @@
     <button onclick="sm()">➤</button>
   </div>
 <script>
-var ch=document.getElementById('ch'),inp=document.getElementById('inp');
-var history=[];
-var AI_URL=''; // Set your Cloudflare Worker URL here, e.g. 'https://mami.nuccidesigner.ch/api'
+var ch=document.getElementById('ch');
+var inp=document.getElementById('inp');
 
 function ts(){var n=new Date();return('0'+n.getHours()).slice(-2)+':'+('0'+n.getMinutes()).slice(-2)}
-function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
-function am(t,s,ai){var tag=ai?'<span class="ai">'+ai+'</span>':'';var d=document.createElement('div');d.className='m '+(s==='mami'?'l':'r');d.innerHTML=esc(t)+tag+'<span class="t">'+ts()+'</span>';ch.appendChild(d);ch.scrollTop=ch.scrollHeight}
+function rp(a){return a[Math.floor(Math.random()*a.length)]}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function am(t,s){var d=document.createElement('div');d.className='m '+(s==='mami'?'l':'r');d.innerHTML=esc(t)+'<span class="t">'+ts()+'</span>';ch.appendChild(d);ch.scrollTop=ch.scrollHeight}
 function at(){var d=document.createElement('div');d.className='ty';d.id='ty';d.textContent='Mami tippt...';ch.appendChild(d);ch.scrollTop=ch.scrollHeight}
 function rt(){var e=document.getElementById('ty');if(e)e.parentNode.removeChild(e)}
-function rp(a){return a[Math.floor(Math.random()*a.length)]}
 
-// ── AI-powered response via proxy ──
-function aiResponse(msg){
-  return new Promise(function(resolve){
-    if(!AI_URL){resolve(null);return}
-    fetch(AI_URL,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({message:msg,history:history.slice(-10)})
-    }).then(function(r){
-      if(!r.ok)throw new Error('API '+r.status);
-      return r.json();
-    }).then(function(data){
-      if(data.reply)resolve(data.reply);
-      else resolve(null);
-    }).catch(function(){
-      resolve(null);
-    });
-  });
-}
-
-// ── Local fallback responses ──
+// ── All responses ──
 var R={
-  gr:['Hoi Schätzli! 🥰 Endli schribsch mal wieder! Alles guet bi dir?','Ahhh meins Chind! 😍 Wie gohts dir? Hesch guet gschlofe?','Hoi Liebling! ✨ Ich ha grad a di dänkt und do schribsch!','Da bisch ja! 🤗 Ich fröi mi so! Was git s Neus?','Hoi mein Liebling! 💕 Was machsch schöns?','Grienzi mitenand! 🌿 De Papa sägt au Hallo!'],
-  ea:['Ja das wott i wüsse! 🍽️ Hesch au öppis Gsunds gässe?','Guet so! 😊 Me muess guet ässe, suscht gseht me alt us!','Ach du lieber Gott, hoffentlich nume Fast Food wieder! 🥦','Ich mach dr wänn du chunsch es Fondue! 🧀','Wievil Wasser trinksch du? 💧 Mindestens 2 Liter am Tag!','Pizza wieder?? 😱 Ich ha dr en Apfel is Chorb gleit!'],
-  sl:['Gang schloof!! 😤 Es isch spät! Me bruucht 8 Stunde!','Au meine Gott, gang ins Bett! 🛏️ Morge isch au no e Tag!','Hesch z spät gschlofe? 🥱 Ich ha dir doch gsait!','Wänn du nöd gnüeg schlofsch, chunsch krank! 🤒','Du bisch wie de Papa! 🙄 Der chunnt au nie z Zit ins Bett!','Kaffee isch nöd s gliich wie Schloof! ☕'],
-  he:['Oh nein! 🤒 Bisch chrank? Soll i cho und e Supp bringe?','Gang zum Arzt!! 🏥 Verschieb das nöd!','Arm Seeli! 😢 Trink vil Wasser und rüeh di uus!','Ich bring en Hühnersuppe! 🍗 Die helft immer!','Tabletten nimmst du scho? 💊 Vergiss nöd!','Rüeh di us! 🛋️ Hitzigi Zitrone mit Honig!'],
-  wo:['Arbschdisch du z viel! 😤 Mach au Pausene!','Und wien amo gähst haime? ⏰','Hoffentlich chasch au Ferie mache! 🏖️','Ich bin stolz uf di! 🌟','Stress isch schlecht für s Härz! ❤️','Wänn chasch am Wuchenend cho? 🏠'],
-  we:['Ja z Huus gseht s au so uus! 🌧️ Zieh di warm a!','Drüeh di warm a!! 🧣','Schöns Wetter für e Spaziergang! 🌤️','Pack en Regeschirm ii! 🌂','Es isch so kalt! 🥶 Ich ha dr e Pulli uuspackt!','Schnee!! ⛄ De Papa wott Schlittel go!'],
-  mo:['Spar s Gäld! 💰','Das isch z düür! 😱','Hesch scho i d Pensionskasse gluekt? 🏦','Geld mach nöd glücklich, aber es beruhigt! 🧘','Mir hend früener au kei Gäld gha! 🏠','S 3a-Sparprinzip: 1/3 miete, 1/3 läbe, 1/3 spar! 💡'],
-  lo:['Ohhh!! 😍 Bisch verliebt?? Erzähl!','Hesch öpper? Das git mi so glücklich! 🥰','E Beziehig isch Harbet! 💪','D LIEBI isch ds Wichtigste im Läbe! ❤️','Ich han mit em Papa 40 Johr! 💕','S isch wichtig, dass öpper zu dir passt! 🌟'],
-  fr:['Guet dass du Zit mit Freunde verbringsch! 🥂 Aber trink nöd z viel!','Wien spät bisch cho? 🕐','Fussball?? ⚽ De Papa wott au cho!','Vergiss nöd: Wasser trinke zwüsche de Cocktails! 💧','Chasch e Foto schicke? 📸','Mir hend früener im Zelt campiert! ⛺'],
-  th:['Gern gschäh! 😊 Das mach doch e Mami!','Du bisch willkomme! 🤗','Hör uf z danke! ❤️ Das isch s Nätürlichi!','Es git nüs z danke! Mir sind Familie! 👨‍👩‍👦','Ja ja, ich weiss! 🥰 Ich bin die Beste Mami!'],
-  gb:['Tschüss mei Schatz! 😘 Pass uf di uuf!','Gute Nacht! 💤 Schloof guet! 🌙','Mach s guet! 🤗 Bis bald! Ich ha di lieb!','Adieu Liebling! 🥰','Ciao ciao! 😘 Schriib mer wenn du haime bisch!'],
-  ma:['Ja, das bin i! 👩 Dini liebi Mami!','Ich ha di immer im Herz! ❤️','Au ja, de Papa sägt au Hallo! 👋','D Familie isch s Wichtigste! 👨‍👩‍👦','Du bisch meis liebstes Chind! 😍 ...Aber sagsch em Papa nöd!'],
-  sw:['Aha!! 🤨 Wieso schwörsch du??','Hör uuf mit dem Sprooch!! 😤','Mein Gott, was redsch du da! 😱','So e Sprooch! 😤 D Grossmuetter würd sich umdreie!','Wäsch der Mund!! 🧼 Ha, nur e Scherz!'],
-  co:['Ach Liebling! 🥰 Das machsch mi guet chruschtig!','Du bisch au s Schönste was mir gha hend! 😍','Tippy Toppi! ✨','Du chasch au ganz schön! Aber Dü Beschte chunnt vo mir! 😄'],
-  te:['Sit nöd immer vor em Bildschirm! 👀','Scho wieder am Handy?? 🤨','Du programmiersch? 💻 Wow!','Ich ha jetz au Instagram! 📸','Was isch TikTok?? 🎵'],
-  so:['Das isch guet! 🤗 Mami vergibt immer!','Ach Liebling, mach dir kei Gedanke! ❤️','Kei Thema! 😊 Mir sind Familie!'],
-  ha:['Das freut mi so!! 😍🥰','Mein Schatz isch glücklich, dann bin i au glücklich! ❤️','Wunderschön! 🌟 Immer Optimismus!'],
-  sa:['Oh nein, was isch los?? 😢 Erzähl mer alles!','Komm her! 🤗 Alles wird guet!','Ich chumm cho! 🚗 Echti!','Rüeh di ab, atm ii! 🧘 Alles wird guet!','Du bisch nöd alleine! 🤝'],
-  ho:['Wosch cho?? 🏠 Ich mach es Fondue!','Züri isch schön aber tüür! 😅','Ich bring am Wuchenend Guetz mit! 🥧','Mir chönnted en Usflug mache! 🥾'],
-  sp:['Guet dass du Sport machsch! 💪','Velo fahre isch gsund! 🚲 Aber Helm aazeie!!','Schwimme isch ds Beschte für de Rücke! 🏊','Sport macht glücklich! 🌟'],
-  pe:['Ds Tierli!! 🐕 Wie gohts em?','Hesch es Haustier?? 😍 Schick e Foto!','Tierli sind wie Chind! ❤️','Vergiss nöd s Tier z füttere! 🍖'],
+gr:['Hoi Schätzli! 🥰 Endli schribsch mal wieder! Alles guet bi dir?','Ahhh meins Chind! 😍 Wie gohts dir? Hesch guet gschlofe?','Hoi Liebling! ✨ Ich ha grad a di dänkt und do schribsch!','Da bisch ja! 🤗 Ich fröi mi so! Was git s Neus?','Hoi mein Liebling! 💕 Was machsch schöns am Wuchenend?','Grienzi mitenand! 🌿 De Papa sägt au Hallo!','Schön vo dir z höre! 🥰 Ich ha mi schon gfrögt was mit dir isch!','Da bisch ja endli! 😤 Ich ha scho 3x welle schrybe!'],
+ea:['Ja das wott i wüsse! 🍽️ Hesch au öppis Gsunds gässe? Nume Döner isch chli einseitig!','Guet so! 😊 Me muess guet ässe, suscht gseht me alt us wie d Grossmuetter!','Ach du lieber Gott, hoffentlich nume Fast Food wieder! 🥦 Mach mal e Salat!','Ich mach dr wänn du chunsch es Fondue! 🧀 De Papa chunnt au!','Wievil Wasser trinksch du? 💧 Mindestens 2 Liter am Tag!','Pizza wieder?? 😱 Ich ha dr en Apfel is Chorb gleit!','Es Znacht sött me nöd z schwer ässe, suscht chasch nöd guet schloof! 🌙','Raclette? Oh das mach mer zeme! 🧀 Ich ha no Chäs im Chühlschrank!'],
+sl:['Gang schloof!! 😤 Es isch spät! Me bruucht 8 Stunde!','Au meine Gott, gang ins Bett! 🛏️ Morge isch au no e Tag!','Hesch z spät gschlofe? 🥱 Ich ha dir doch gsait!','Wänn du nöd gnüeg schlofsch, chunsch krank! 🤒 Also: Bettkante!','Schloof guet mei Schatz! 💤 Träum schöni Träum!','Du bisch wie de Papa! 🙄 Der chunnt au nie z Zit ins Bett!','Kaffee isch nöd s gliich wie Schloof! ☕ Dr Körper bruucht Ruh!'],
+he:['Oh nein! 🤒 Bisch chrank? Hesch Fieber? Soll i cho und e Supp bringe?','Gang zum Arzt!! 🏥 Verschieb das nöd!','Arm Seeli! 😢 Trink vil Wasser und rüeh di uus! Soll i dr öppis bringe?','Ich bring en Hühnersuppe! 🍗 Die helft immer!','Tabletten nimmst du scho? 💊 Vergiss nöd!','Rüeh di us! 🛋️ Hitzigi Zitrone mit Honig, das isch ds Beschte!','Soll i dr vom Apothek es Mirrorals hole? 🧴'],
+wo:['Arbschdisch du z viel! 😤 Mach au Pausene!','Und wien amo gähst haime? ⏰ Me sell nöd bis 8 z Nacht schaffe!','Hoffentlich chasch au Ferie mache! 🏖️','Ich bin stolz uf di! 🌟 Meins Chind schafft so fleissig!','Stress isch schlecht für s Härz! ❤️ Mach mal e Pause!','Wänn chasch am Wuchenend cho? 🏠 Me gseh di chuum no!'],
+we:['Ja z Huus gseht s au so uus! 🌧️ Zieh di warm a!','Drüeh di warm a!! 🧣 D Sunne chas au trüge!','Schöns Wetter für e Spaziergang! 🌤️ Gang chli use!','Pack en Regeschirm ii! 🌂 Ich ha letzt Wuche kuum trocke cho!','Es isch so kalt! 🥶 Ich ha dr e Pulli uuspackt!','Schnee!! ⛄ De Papa wott Schlittel go!'],
+mo:['Spar s Gäld! 💰 Es git chliiigi Kwellen!','Das isch z düür! 😱 Biirli i de Metzgi gits für d Helfti!','Hesch scho i d Pensionskasse gluegt? 🏦','Geld mach nöd glücklich, aber es beruhigt! 🧘','Mir hend früener au kei Gäld gha! 🏠 Aber mir hend s gschafft!','S 3a-Sparprinzip: 1/3 miete, 1/3 läbe, 1/3 spar! 💡'],
+lo:['Ohhh!! 😍 Bisch verliebt?? Erzähl! Erzähl!','Hesch öpper? Das git mi so glücklich! 🥰','E Beziehig isch Harbet! 💪 Aber wens di guet behandlet, bin i z friide!','D LIEBI isch ds Wichtigste im Läbe! ❤️','Ich han mit em Papa 40 Johr! 💕 Es git Schwierigkeite, aber me kämpft!','S isch wichtig, dass öpper zu dir passt! 🌟'],
+fr:['Guet dass du Zit mit Freunde verbringsch! 🥂 Aber trink nöd z viel!','Wien spät bisch cho? 🕐 Ich hoff zmindesch vor Mitternacht!','Fussball?? ⚽ De Papa wott au cho!','Vergiss nöd: Wasser trinke zwüsche de Cocktails! 💧','Chasch e Foto schicke? 📸 Ich will gseh wies usgseht!','Mir hend früener im Zelt campiert! ⛺'],
+th:['Gern gschäh! 😊 Das mach doch e Mami!','Du bisch willkomme! 🤗 Mir hend immer fürenand do!','Hör uf z danke! ❤️ Das isch s Nätürlichi!','Es git nüs z danke! Mir sind Familie! 👨‍👩‍👦','Ja ja, ich weiss! 🥰 Ich bin die Beste Mami vo der Wält!'],
+gb:['Tschüss mei Schatz! 😘 Pass uf di uuf! Schriib mer!','Gute Nacht! 💤 Schloof guet und träum schön! 🌙','Mach s guet! 🤗 Bis bald! Ich ha di lieb!','Adieu Liebling! 🥰 Vergiss nöd z ässe vor em Schloofe!','Ciao ciao! 😘 Schriib mer wenn du haime bisch!'],
+ma:['Ja, das bin i! 👩 Dini liebi Mami! Was bruuchsch?','Ich ha di immer im Herz! ❤️ E Mami vergisst ihri Chind nöd!','Au ja, de Papa sägt au Hallo! 👋 Er isch grad im Gaarte!','D Familie isch s Wichtigste! 👨‍👩‍👦','Du bisch meis liebstes Chind! 😍 ...Aber sagsch em Papa nöd!','De Papa fragt ob du am Wuchenend chunsch zum Gartnä!'],
+sw:['Aha!! 🤨 Wieso schwörsch du?? Hani di so erzoge??','Hör uuf mit dem Sprooch!! 😤 Das chunnt nöd guet!','Mein Gott, was redsch du da! 😱','So e Sprooch! 😤 D Grossmuetter würd sich im Grab umdreie!','Wäsch der Mund!! 🧼 Ha, nur e Scherz!'],
+co:['Ach Liebling! 🥰 Das machsch mi guet chruschtig!','Du bisch au s Schönste was mir gha hend! 😍','Tippy Toppi! ✨ Das säge mer immer!','Das isch aber e Kompliment! 💕 Merci Schatz!'],
+te:['Sit nöd immer vor em Bildschirm! 👀 Das tuet de Augä nöd guet!','Scho wieder am Handy?? 🤨 Gang chli use an frischi Luft!','Du programmiersch? 💻 Wow, mein Schatz isch e Informatiker!','Ich ha jetz au Instagram! 📸 De Papa het mer s zeigt!','Mir hend früener kei Internet gha! 📞 Nur s Telefon mit em Kabel!'],
+so:['Das isch guet! 🤗 Es chunnt vor! Mami vergibt immer!','Ach Liebling, mach dir kei Gedanke! ❤️','Kei Thema! 😊 Mir sind Familie!','Es git kei Fehler, nur Lernchance! 🌟'],
+ha:['Das freut mi so!! 😍🥰','Mein Schatz isch glücklich, dann bin i au glücklich! ❤️','Wunderschön! 🌟 Immer Optimismus!','Glücklich si isch ds Wichtigste im Läbe! ✨'],
+sa:['Oh nein, was isch los?? 😢 Erzähl mer alles! Mami seit zue!','Komm her! 🤗 Alles wird guet! I bi für di da!','Ich chumm cho! 🚗 Echti! Pack nöt, i bi in 10 Minute da!','Rüeh di ab, atm ii, 1, 2, 3... 🧘 Alles wird guet!','Du bisch nöd alleine! 🤝 Mir sind alli für di da!','Jede Tag isch e neui Chance! 🌅 Morge isch alles besser!'],
+ho:['Wosch cho?? 🏠 Ich mach es Fondue! 🧀','Züri isch schön aber tüür! 😅 Chunsch zu uns?','Ich bring am Wuchenend Guetz mit! 🥧','Mir chönnted en Usflug mache! 🥾 Is Bärner Oberland!','Reise?? ✈️ Wohin? Bring mer es Tüechli mit!'],
+sp:['Guet dass du Sport machsch! 💪 Me muess sich bewege!','Velo fahre isch gsund! 🚲 Aber Helm aazeie!! 😤','Schwimme isch ds Beschte für de Rücke! 🏊','Sport macht glücklich! 🌟 Mindestens 30 Minüte am Tag!'],
+pe:['Ds Tierli!! 🐕 Wie gohts em? Ich ha en Knoche für em!','Hesch es Haustier?? 😍 Schick e Foto!','Tierli sind wie Chind! ❤️ Si bruche au Liebi und Zit!','Vergiss nöd s Tier z füttere! 🍖'],
 };
 
-var TRIGGERS={};
-var cats=Object.keys(R);
-for(var i=0;i<cats.length;i++){
-  var k=cats[i];
-  TRIGGERS[k]=[''];
-  // Extract trigger words from context
-}
-
-var TMAP={
-  gr:['hallo','hi','hey','hoi','grüezi','servus','morjen','guten','abend','morgen'],
-  ea:['gässe','ässe','esse','hungri','pizza','pasta','chuchi','chöchle','kochen','chuchä','kuchen','fondue','raclette','znüni','zmittag','znacht','mittag','supp','suppe','salat','gsund'],
-  sl:['schloof','schlafen','müed','müde','schlaf','nacht','spät','bett','uufstah','wecker','alarm','traum','kaffee'],
-  he:['chrank','krank','grippe','hueste','husten','schmerz','kopfweh','fieber','arzt','doktor','spital','tabletten','wehtue','verletzt','operation','bluet'],
-  wo:['schaff','schaffe','arbeit','job','chef','kolleg','meeting','lohn','gehalt','ferie','stress','deadline','büro','kündig'],
-  we:['wetter','regen','rege','schnee','sunne','sonne','kalt','warm','heiss','wind','sturm','gwitter'],
-  mo:['gäld','geld','teuer','düür','spar','spare','budget','arm','reich','schulden','kauf','steuer'],
-  lo:['freundi','freundin','freund','partner','liebi','liebe','date','beziehung','heirate','verliebt','single','tinder','kuss','herz','ex'],
-  fr:['party','fiife','feiern','trinke','bier','wiib','wein','cocktail','fussball','film','kino','spil','spiel','usgang','bar','club'],
-  th:['danke','dank','merci','thank','beste','super','toll','klasse','genial','cool','perfekt'],
-  gb:['tschüss','bye','ciao','adieu','gute nacht','guete nacht','gn8','g8','bis bald','machs gut'],
-  ma:['mami','mutter','mueter','mama','mam','mutti','eltern','papa','vati','vater','familie','brüeder','schwöster'],
-  sw:['fuck','shit','hure','arsch','verdammt','scheisse','mist','dumm','idiot','crap','damn'],
-  co:['schön','hübsch','perfekt','lieb','nett','süss','mega','hammer','krass','wunderbar','genial','geil'],
-  te:['handy','computer','laptop','app','internet','wifi','programmier','code','telegram','instagram','tiktok','youtube','netflix','gaming','spotify'],
-  so:['sorry','entschuldigung','verzeih','falsch','mein fehler','tut mir leid','upsi'],
-  ha:['glücklich','freu','fröhlich','happy','fantastisch','bestens','awesome','great','chille'],
-  sa:['traurig','problem','schlecht','böse','wütend','stressig','nervös','down','deprimiert','alleine','einsam','heule','fail','kaputt'],
-  ho:['huus','züri','zürich','bern','basel','reise','urlaub','flug','zug','auto','strand','meer','berg','italie','spanie'],
-  sp:['sport','training','gym','fitness','jogge','schwimme','velo','fahrrad','fussball','tennis','yoga','workout'],
-  pe:['hund','katze','katzi','tier','vogel','fisch','kaninchen','hamster','pferd','tierli'],
+var T={
+gr:['hallo','hi','hey','hoi','grüezi','servus','morjen','guten','abend','morgen'],
+ea:['gässe','ässe','esse','hungri','pizza','pasta','chuchi','chöchle','kochen','chuchä','kuchen','fondue','raclette','znüni','zmittag','znacht','mittag','supp','suppe','salat','gsund'],
+sl:['schloof','schlafen','müed','müde','schlaf','nacht','spät','bett','uufstah','wecker','alarm','kaffee'],
+he:['chrank','krank','grippe','hueste','husten','schmerz','kopfweh','fieber','arzt','doktor','spital','tabletten','wehtue','verletzt'],
+wo:['schaff','schaffe','arbeit','job','chef','kolleg','meeting','lohn','gehalt','ferie','stress','deadline','büro'],
+we:['wetter','regen','rege','schnee','sunne','sonne','kalt','warm','heiss','wind','sturm','gwitter'],
+mo:['gäld','geld','teuer','düür','spar','spare','budget','arm','reich','schulden','kauf','steuer'],
+lo:['freundi','freundin','freund','partner','liebi','liebe','date','beziehung','heirate','verliebt','single','tinder','kuss','herz','ex'],
+fr:['party','fiife','feiern','trinke','bier','wiib','wein','cocktail','fussball','film','kino','spil','spiel','usgang','bar'],
+th:['danke','dank','merci','thank','beste','super','toll','klasse','genial','cool','perfekt'],
+gb:['tschüss','bye','ciao','adieu','gute nacht','guete nacht','gn8','g8','bis bald'],
+ma:['mami','mutter','mueter','mama','mam','mutti','eltern','papa','vati','vater','familie'],
+sw:['fuck','shit','hure','arsch','verdammt','scheisse','mist','dumm','idiot','crap','damn'],
+co:['schön','hübsch','perfekt','lieb','nett','süss','mega','hammer','krass','wunderbar'],
+te:['handy','computer','laptop','app','internet','wifi','programmier','code','telegram','instagram','tiktok','youtube','netflix','gaming'],
+so:['sorry','entschuldigung','verzeih','falsch','mein fehler','tut mir leid','upsi'],
+ha:['glücklich','freu','fröhlich','happy','fantastisch','bestens','awesome','great','chille'],
+sa:['traurig','problem','schlecht','böse','wütend','stressig','nervös','down','deprimiert','alleine','einsam','fail','kaputt'],
+ho:['huus','züri','zürich','bern','reise','urlaub','flug','zug','auto','strand','meer','berg','italie','spanie'],
+sp:['sport','training','gym','fitness','jogge','schwimme','velo','fussball','tennis','yoga'],
+pe:['hund','katze','katzi','tier','vogel','fisch','kaninchen','hamster','tierli'],
 };
 
 function localResponse(txt){
@@ -155,15 +124,13 @@ function localResponse(txt){
   var h=new Date().getHours();
   var parts=[];
 
-  // Time nag
-  if(h>=22)parts.push(rp(['Es isch aber spät!! 😤 Gang schloof!','Was machsch no wach?? 😴']));
-  else if(h<7)parts.push(rp(['Uff, bisch early wach! 🌅','Was machsch um die Zit?? 😴']));
+  if(h>=22)parts.push(rp(['Es isch aber spät!! 😤 Gang schloof!','Was machsch no wach?? 😴','MEIN GOTT es isch nach 11! Gang BETT!']));
+  else if(h<7)parts.push(rp(['Uff, bisch early wach! 🌅','Hesch überhaupt gschlofe?? 😅']));
   else if(h>=11&&h<=13&&Math.random()>0.5)parts.push(rp(['Hesch scho Zmittag gha? 🍽️','Nöd vergässe z ässe!']));
 
-  // Match topics
-  var cats=Object.keys(TMAP);
-  for(var i=0;i<cats.length;i++){
-    var k=cats[i],tr=TMAP[k];
+  var keys=Object.keys(T);
+  for(var i=0;i<keys.length;i++){
+    var k=keys[i],tr=T[k];
     for(var j=0;j<tr.length;j++){
       if(t.indexOf(tr[j])!==-1){parts.push(rp(R[k]));break}
     }
@@ -176,78 +143,67 @@ function localResponse(txt){
       'Ja wo, und wieso sagsch mer da? 😊',
       'Mami verstoot das nöd ganz, aber solangs di glücklich macht! 😄',
       'Hmm! 🤨 Und was willsch du jetzt genau?',
-      'Ja ja, die junge Lüt hüt! 😅',
+      'Ja ja, die junge Lüt hüt! 😅 Zmeine Zite isch das anders gsi!',
       'Du chasch mer immer schrybe! Ich bi immer do! ❤️',
       'Mami isch do! 🤗 Was git s?',
       'Ich ha di lieb, weisst du das? ❤️',
+      'Und? Was isch passiert? 😊 Erzähl!',
+      'Oh ja? 🤔 Das chasch du mir genauer erkläre!',
     ]));
   }
+
+  if(Math.random()>0.65)parts.push(rp([
+    'Übrigens: Hesch scho Wasser trunke? 💧',
+    'D Grossmuetter grüesst au! 👵',
+    'Soll i dr es Paket schicke? 📦',
+    'De Papa fragt: Bisch am Wuchenend da? 🏠',
+    'Ich ha am Sonntig es Guetz gmacht! 🥧',
+    'Ich ha d Photos vo dir aagluegt! So gross bisch wordle! 😭❤️',
+    'Ich ha mi so über di gfröit! 💕',
+    'De Papa chunnt au Grüess! 👋',
+    'D Katzi vom Nachber isch wider schwanger! 🐱',
+    'Wosch zum Zmittag cho? 🍽️ Ich mach Rösti!',
+  ]));
 
   return parts.join(' ');
 }
 
-// ── Main send ──
-var sending=false;
+// ── Send message (simple, no promises, no async) ──
 function sm(){
-  if(sending)return;
   var txt=inp.value.trim();
   if(!txt)return;
   inp.value='';
   am(txt,'ich');
-  history.push({role:'user',text:txt});
-  sending=true;
   at();
-
-  // Try AI first, fallback to local
-  aiResponse(txt).then(function(aiReply){
+  var delay=600+Math.random()*1200;
+  setTimeout(function(){
     rt();
-    if(aiReply){
-      am(aiReply,'mami','✨ AI');
-      history.push({role:'mami',text:aiReply});
-    }else{
-      var local=localResponse(txt);
-      am(local,'mami','💬');
-      history.push({role:'mami',text:local});
-    }
-    // Keep history manageable
-    if(history.length>50)history=history.slice(-30);
-    sending=false;
-  });
+    am(localResponse(txt),'mami');
+  },delay);
 }
 
 function se(em){
-  if(sending)return;
   am(em,'ich');
-  history.push({role:'user',text:em});
-  sending=true;
   at();
-  aiResponse(em).then(function(aiReply){
+  var ER={
+    '❤️':['❤️❤️❤️ Ich ha di au lieb!!','Liebe Grüess! 😘','Mami liebt di am meischte! 💕'],
+    '😊':['Wieso lachsch du? 😄','Es freut mi dich z gseh! 🥰','Lach meh! Das tuet guet! 😊'],
+    '😂':['Was isch so lustig?? 😂','Haha, teils! 😆','Lach chli leiser, de Papa schloft! 🤫😂'],
+    '🙏':['Kei Problem! 🤗','Das mach doch e Mami! ❤️','Immer gerne! 💕'],
+    '😅':['Was isch passiert?? 😅','Haha, okey! 😄','Sags mer ehrlich! 🤨'],
+    '😘':['Ach!! 😘😘😘','Chussi! 😘','Liebling! ❤️'],
+    '👋':['Tschüss!! 👋 Bis bald!','Ciao mein Schatz! 🤗','Machs guet! 👋❤️'],
+    '😴':['Gang schloof!! 😤','Gute Nacht! 💤','Ruh di uus! 😴'],
+    '🤦':['Was isch passiert?? 😰 Erzähl mer!','Oh nein! 😤 Mami chunnt!','Chasch nöd alles alleine! 🤗'],
+    '💪':['Mami glaubt an di! 🌟','Du schaffs das! 💪❤️','Stärk si! 💪'],
+    '🎂':['ALLES GUTE ZUM GEBURTSTAG!! 🎂🎂🎂','HAPPY BIRTHDAY mein Schatz!! 🎉🥳'],
+    '🏠':['Wosch cho?? 🏠 Mir warte uf di!','Z Huus isch immer offe für di! 🏠❤️'],
+  };
+  var delay=600+Math.random()*800;
+  setTimeout(function(){
     rt();
-    if(aiReply){
-      am(aiReply,'mami','✨ AI');
-      history.push({role:'mami',text:aiReply});
-    }else{
-      var ER={
-        '❤️':['❤️❤️❤️ Ich ha di au lieb!!','Liebe Grüess! 😘','Mami liebt di am meischte! 💕'],
-        '😊':['Wieso lachsch du? 😄','Es freut mi dich z gseh! 🥰'],
-        '😂':['Was isch so lustig?? 😂','Haha, teils! 😆','Lach chli leiser, de Papa schloft! 🤫😂'],
-        '🙏':['Kei Problem! 🤗','Das mach doch e Mami! ❤️'],
-        '😅':['Was isch passiert?? 😅','Sags mer ehrlich! 🤨'],
-        '😘':['Ach!! 😘😘😘','Chussi! 😘','Liebling! ❤️'],
-        '👋':['Tschüss!! 👋 Bis bald!','Ciao mein Schatz! 🤗'],
-        '😴':['Gang schloof!! 😤','Gute Nacht! 💤'],
-        '🤦':['Was isch passiert?? 😰','Oh nein! Was hesch du agstellt? 😤','Mami chunnt! 🚗'],
-        '💪':['Mami glaubt an di! 🌟','Du schaffs das! 💪❤️'],
-        '🎂':['ALLES GUTE ZUM GEBURTSTAG!! 🎂🎂🎂','HAPPY BIRTHDAY mein Schatz!! 🎉🥳'],
-        '🏠':['Wosch cho?? 🏠 Mir warte uf di!','Z Huus isch immer offe für di! 🏠❤️'],
-      };
-      var resp=rp(ER[em]||['🤗','😊','❤️']);
-      am(resp,'mami','💬');
-      history.push({role:'mami',text:resp});
-    }
-    if(history.length>50)history=history.slice(-30);
-    sending=false;
-  });
+    am(rp(ER[em]||['🤗','😊','❤️']),'mami');
+  },delay);
 }
 
 inp.addEventListener('keydown',function(e){if(e.key==='Enter')sm()});
@@ -262,7 +218,6 @@ setTimeout(function(){
   else if(h<21)g='Guten Aabig! 🌙 Was machsch so?';
   else g='Mein Gott, es isch spät!! 😤 Gang schloof!!';
   am(g,'mami');
-  history.push({role:'mami',text:g});
 },400);
 </script>
 </body>
