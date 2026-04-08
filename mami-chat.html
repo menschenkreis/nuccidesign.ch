@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Mami Chat — NucciDesigner</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    body{font-family:'Inter',sans-serif;background:#0a0a0f;color:#e8e8ed;height:100vh;overflow:hidden;display:flex;flex-direction:column;user-select:none}
+
+    .header{display:flex;align-items:center;gap:12px;padding:14px 16px;background:rgba(255,255,255,.04);border-bottom:1px solid rgba(255,255,255,.06);backdrop-filter:blur(12px);z-index:10;flex-shrink:0}
+    .back-link{color:rgba(255,255,255,.4);text-decoration:none;font-size:.8rem;font-weight:600}
+    .avatar{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#f472b6,#c44dff);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+    .header-info{flex:1}
+    .header-name{font-size:.88rem;font-weight:700}
+    .header-status{font-size:.68rem;color:#34d399;display:flex;align-items:center;gap:4px}
+    .header-status .dot{width:6px;height:6px;border-radius:50%;background:#34d399;animation:pulse 2s infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+    .chat{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:6px;scroll-behavior:smooth}
+    .chat::-webkit-scrollbar{width:3px}
+    .chat::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px}
+
+    .msg{max-width:80%;padding:10px 14px;border-radius:18px;font-size:.84rem;line-height:1.45;animation:msgIn .25s ease-out;word-wrap:break-word}
+    @keyframes msgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+    .msg.mami{align-self:flex-start;background:rgba(255,255,255,.07);border-bottom-left-radius:6px;color:#e8e8ed}
+    .msg.ich{align-self:flex-end;background:linear-gradient(135deg,#c44dff,#7c6aef);border-bottom-right-radius:6px;color:white}
+    .msg .time{font-size:.58rem;opacity:.4;margin-top:4px;display:block}
+
+    .typing{align-self:flex-start;padding:12px 18px;font-size:.82rem;color:rgba(255,255,255,.35);animation:pulse 1s infinite}
+
+    .input-bar{display:flex;gap:8px;padding:12px 16px;background:rgba(255,255,255,.03);border-top:1px solid rgba(255,255,255,.06);flex-shrink:0}
+    .input-bar input{flex:1;padding:12px 18px;border-radius:100px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.05);color:#e8e8ed;font-size:.84rem;font-family:'Inter',sans-serif;outline:none}
+    .input-bar input::placeholder{color:rgba(255,255,255,.2)}
+    .input-bar input:focus{border-color:rgba(196,77,255,.4)}
+    .send-btn{width:44px;height:44px;border-radius:50%;border:none;background:linear-gradient(135deg,#c44dff,#7c6aef);color:white;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .1s}
+    .send-btn:active{transform:scale(.9)}
+
+    .emoji-bar{display:flex;gap:4px;padding:4px 16px 8px;overflow-x:auto;flex-shrink:0}
+    .emoji-bar::-webkit-scrollbar{display:none}
+    .emoji-btn{width:36px;height:36px;border-radius:50%;border:none;background:rgba(255,255,255,.04);font-size:1.1rem;cursor:pointer;flex-shrink:0;transition:all .1s}
+    .emoji-btn:active{transform:scale(.85);background:rgba(196,77,255,.2)}
+
+    .date-sep{text-align:center;font-size:.62rem;color:rgba(255,255,255,.2);padding:8px 0}
+
+    .start-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(20px);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:50;padding:24px;text-align:center;gap:16px}
+    .start-overlay.hidden{display:none}
+    .start-avatar{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#f472b6,#c44dff);display:flex;align-items:center;justify-content:center;font-size:2.5rem;animation:float 3s ease-in-out infinite}
+    @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+    .start-title{font-size:1.3rem;font-weight:800}
+    .start-desc{font-size:.78rem;color:rgba(255,255,255,.4);max-width:280px;line-height:1.5}
+    .start-btn{padding:14px 40px;border-radius:100px;border:none;background:linear-gradient(135deg,#f472b6,#c44dff);color:white;font-size:.88rem;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;margin-top:8px;transition:transform .15s}
+    .start-btn:active{transform:scale(.95)}
+  </style>
+</head>
+<body>
+  <div class="start-overlay" id="startOverlay">
+    <div class="start-avatar">👩</div>
+    <div class="start-title">Chat mit Mami</div>
+    <div class="start-desc">Dini Mami wartet uf di. Si gseht immer, dass du nüm gschribe hesch!</div>
+    <button class="start-btn" onclick="startChat()">Nachricht schicke 💬</button>
+  </div>
+
+  <div class="header">
+    <a href="index.html" class="back-link">←</a>
+    <div class="avatar">👩</div>
+    <div class="header-info">
+      <div class="header-name">Mami ❤️</div>
+      <div class="header-status"><div class="dot"></div> Online</div>
+    </div>
+  </div>
+
+  <div class="chat" id="chat"></div>
+
+  <div class="emoji-bar">
+    <button class="emoji-btn" onclick="sendEmoji('❤️')">❤️</button>
+    <button class="emoji-btn" onclick="sendEmoji('😊')">😊</button>
+    <button class="emoji-btn" onclick="sendEmoji('😂')">😂</button>
+    <button class="emoji-btn" onclick="sendEmoji('🙏')">🙏</button>
+    <button class="emoji-btn" onclick="sendEmoji('😅')">😅</button>
+    <button class="emoji-btn" onclick="sendEmoji('😘')">😘</button>
+    <button class="emoji-btn" onclick="sendEmoji('👋')">👋</button>
+    <button class="emoji-btn" onclick="sendEmoji('😴')">😴</button>
+  </div>
+
+  <div class="input-bar">
+    <input type="text" id="msgInput" placeholder="Schrib e Nachricht..." autocomplete="off" onkeydown="if(event.key==='Enter')sendMessage()">
+    <button class="send-btn" onclick="sendMessage()">➤</button>
+  </div>
+
+  <script>
+    const chat = document.getElementById('chat');
+    const input = document.getElementById('msgInput');
+    let msgCount = 0;
+    let lastTopics = [];
+    let mamiMood = 'loving'; // loving, worried, happy, proud, annoyed
+
+    // ── Mami's brain ──
+    const MAMI_RESPONSES = {
+      greetings: {
+        triggers: ['hallo','hi','hey','hoi','grüezi','servus','morjen','na','guten','abend','morgen','tag'],
+        responses: [
+          'Hoi Schätzli! 🥰 Endli schribsch mal wieder! Alles guet bi dir?',
+          'Ahhh meins Chind! 😍 Wie gohts dir? Hesch guet gschlofe?',
+          'Hoi Liebling! ✨ Ich ha grad a di dänkt und do schribsch! Was machsch?',
+          'Da bisch ja! 🤗 Ich fröi mi so! Was git s Neus?',
+          'Morgen mein Schatz! ☀️ Hesch scho z'Morgä gässe? Das isch wichtiger als alles andere!',
+        ]
+      },
+      eating: {
+        triggers: ['gässe','ässe','esse','gähn','hungri','hufiger','pizza','pasta','chuchi','chöchle','küche','kochen','chuchä','kuchen','fondue','raclette','brötli','brot','znüni','zmittag','zvesper','znacht','mittag','abendessen','mittagessen','fast food','mäckes','mc','doner','kebab','sushi'],
+        responses: [
+          'Ja das wott i wüsse! 🍽️ Hesch au öppis Gsunds gässe? Nume Döner isch chli einseitig!',
+          'Guet so! 😊 Me muess guet ässe, suscht gseht me alt us wie d Grossmuetter! Ha!',
+          'Ach du lieber Gott, hoffentlich nume Fast Food wieder! 🥦 Mach mal e Salat, das tuet em Buuch guet!',
+          'Gähsch regelmässig? 🕐 Me sell nöd s Znacht useloh! Ich mach dr wänn du chunsch es Fondue!',
+          'Hesch scho probiert mit de neue Rezept? 🍲 D Nächscht het mi gseit, das wär super gsi!',
+        ]
+      },
+      sleep: {
+        triggers: ['schloof','schlafen','müed','müde','schlaf','nächt','nacht','übernächtige','übernachten','spät','ins bett','bett','uufstah','aufstehen','wecker','alarm','dream','traum','nöd chönne schloof'],
+        responses: [
+          'Gang schloof!! 😤 Es isch spät! Me bruucht 8 Stunde, suscht bisch morge e Zombie!',
+          'Au meine Gott, es isch doch scho [zeit]! 🛏️ Gang ins Bett, morge isch au no e Tag!',
+          'Hesch z spät gschlofe? 🥱 Ich ha dir doch gsait, chli meh Rutsch!',
+          'Wänn du nöd gnüeg schlofsch, chunsch krank! Das säge d Ärzte! 🤒 Also: Bettkante!',
+          'Schloof guet mei Schatz! 💤 Träum schöni Träum! Morge gseht me sich!',
+        ]
+      },
+      health: {
+        triggers: ['chrank','krank','kropf','grippe','hueste','husten','schmerze','schmerz','kopfweh','fieber','gicht','arzt','doktor','spital','medikament','tabletten','wehtue','tut weh','kaputt','verletzt','operation','apothek','bluet','blut'],
+        responses: [
+          'Oh nein! 🤒 Bisch chrank? Hesch Fieber? Soll i cho und e Supp bringe?',
+          'Gang zum Arzt!! 🏥 Verschieb das nöd! Me cha mit de Gsundheit nöd spile!',
+          'Arm Seeli! 😢 Trink vil Wasser und rüeh di uus! Soll i dr öppis bringe?',
+          'Das git mi kei Ruh! 😟 Hast du scho Apotheksnummer gha? Ich chas dir schicke!',
+          'Du bisch wiesli, aber me wird wider gsund! 🍵 Mach dir en heisse Tee mit Honig!',
+        ]
+      },
+      work: {
+        triggers: ['schaff','schaffe','arbeit','job','arbeits','chef','kolleg','meeting','lohn','gehalt','urlaub','ferie','überstunde','überstund','projekt','stress',' deadline','kund','kunde','geschäft','büro','büro'],
+        responses: [
+          'Arbschdisch du z viel! 😤 Mach au Pausene! Me cha sich nöd komplete verruckt schaffe!',
+          'Und wien amo gähst haime? ⏰ Me sell nöd bis 8 z'Nacht schaffe!',
+          'Hoffentlich chasch au Ferie mache! 🏖️ Me bruucht Erholig, suscht brichts no zsämme!',
+          'Ds Chef isch sicher wieder schuld! 😤 Immer die anderi! Aber blib professionell, ja?',
+          'Ich bin stolz uf di! 🌟 Meins Chind schafft so fleissig! Aber vergiss nöd: Familie isch wichtiger!',
+        ]
+      },
+      weather: {
+        triggers: ['wetter','regen','rege','schnee','schnee','sunne','sonne','hiel','kalt','warm','heiss','kühle','kühlen','wind','sturm','gwitter','gewitter','temperature','grad'],
+        responses: [
+          'Ja z'Huus gseht s au so uus! 🌧️ Zieh di warm a! Ich ha dr e Schal uspackt!',
+          'Drüeh di warm a!! 🧣 D Sunne chas au trüge! Mir han en chalte Wind gha!',
+          'Schöns Wetter für e Spaziergang! 🌤ie Gang chli use, s tuet guet!',
+          'Eh, die Meteorologe wüssed eh nöd was sie tüend! ☀️❄️ Aber pack lieber e Regenschirm ii!',
+        ]
+      },
+      money: {
+        triggers: ['gäld','geld','teuer','düür','chostet','kosten','spar','spare','budget','arm','reich','lohn','schuld','schulden','chauft','gekauft','chöuf','kauf'],
+        responses: [
+          'Spar s Gäld! 💰 Es git chliiigi Kwellen! Du weisch nöd was zuekummt!',
+          'Das isch z düür! 😱 Biirli i de Metzgi gits für d Helfti! Wiso kaufsch du des?',
+          'Wien amo häsch du no? 🤔 Mir hend immer gsparer, au wien es schwiirig gsi isch!',
+          'Hesch scho i d Pensionskasse gluegt? 🏦 Das isch wichtig für spöter!',
+          'Geld isch nöd alles! Aber es macht s Läbe liichter, ha! 😄',
+        ]
+      },
+      love: {
+        triggers: ['freundi','freundin','freund','partner','liebi','liebe','date','beziehung','beziehig','heirate','hochzeit','verliebt','single','treffe','treffe','chat','tinder','kuss','küssen','herz'],
+        responses: [
+          'Ohhh!! 😍 Bisch verliebt?? Erzähl! Erzähl! Isch s öpper Nettis?',
+          'Hesch öpper? Das git mi so glücklich! 🥰 Wänn chöme mer se kenne lehre?',
+          'E Beziehig isch HArbET! 💪 Aber wens di guet behandlet, bin i z'friide!',
+          'Single? Das isch au guet! Ersch moll di sälber finde, den chunnt s Richtigi! ✨',
+          'D LIEBI isch ds Wichtigste im Läbe! ❤️ Mir hend au 40 Johr gmeinsam gmacht!',
+        ]
+      },
+      friends: {
+        triggers: ['freund','kolleg','kollege','zäme','zämmä','usgang','usgang','party','fiife','feiern','trinke','bier','wiib','wein','cocktail','fussball','film','kino','spil','spiel','chlaus','chlaust'],
+        responses: [
+          'Guet dass du Zit mit Freunde verbringsch! 🥂 Aber trink nöd z viel!',
+          'Wien spät bisch cho? 🕐 Ich hoff zmindesch vor Mitternacht!',
+          'Haha das gseht guet us! 😄 Mir hend früener au immer zäme Fiife gmacht!',
+          'Die Kollege vo dir hörn sich super a! 👋 Chasch se miäle bringe?',
+        ]
+      },
+      thanks: {
+        triggers: ['danke','dank','merci','thank','dankeschön','dankschö','danke dir','dankö','beste','super','toll','klasse','genial','cool'],
+        responses: [
+          'Gern gschäh! 😊 Das mach doch e Mami für ihre Schatz!',
+          'Du bisch willkomme! 🤗 Mir hend immer fürenand do!',
+          'Hör uf z danke! ❤️ Das isch s Nätürlichi!',
+        ]
+      },
+      goodbye: {
+        triggers: ['tschüss','bye','ciao','adieu','bis bald','gsehn','sehns','uf widerluege','nächtli','nachtli','gute nacht','guete nacht','gn8','g8'],
+        responses: [
+          'Tschüss mei Schatz! 😘 Pass uf di uuf! Schriib mer! ❤️',
+          'Gute Nacht! 💤 Schloof guet und träum schön! Liebi Grüess! 🌙',
+          'Mach s guet! 🤗 Bis bald! Ich ha di lieb! ❤️',
+          'Adieu Liebling! 🥰 Vergiss nöd z'ässe vor em Schloofe!',
+        ]
+      },
+      mother: {
+        triggers: ['mami','mutter','mueter','mama','mam','mutti','eltern','eltere','papa','vati','vater'],
+        responses: [
+          'Ja, das bin i! 👩 Dini liebi Mami! Was bruuchsch? 🥰',
+          'Do bin i! 😊 Ich bin immer für di da, weisssch du das!',
+          'Ich ha di immer im Herz! ❤️ E Mami vergisst ihri Chind nöd!',
+          'Au ja, de Papa sägt au Hallo! 👋 Er isch grad im Gaarte!',
+        ]
+      },
+      swear: {
+        triggers: ['fuck','shit','hure','arsch','verdammt','scheisse','scheisse','mist','dumm','idiot','crap','damn','bock','verpiss'],
+        responses: [
+          'Aha!! 🤨 Wieso schwörsch du?? Hani di so erzoge??',
+          'Hör uuf mit dem Sprooch!! 😤 Das chunnt nöd guet!',
+          'Mein Gott, was redsch du da für e Dinges! 😱 Red normal!',
+          'SCHÖN REDSCH!! 😤 I will s nümme höre! Chinder höred zu!',
+        ]
+      },
+      compliment: {
+        triggers: ['schön','hübsch','gut','toll','beste','wunderbar','perfekt','lieb','nett','süss','cool','mega','hammer','krass'],
+        responses: [
+          'Ach Liebling! 🥰 Das machsch mi guet chruschtig!',
+          'Du bisch au s Schönste was mir gha hend! 😍 Nätürli nach em Papa, ha!',
+          'Das isch so lieb! 😘 Du bisch au e super Chind! Ich mein: Erwachsene!',
+        ]
+      },
+      tech: {
+        triggers: ['handy','computer','laptop','app','internet','wifi','handy','handy','programmier','code','software','website','github','telegram','social','instagram','tiktok','youtube','netflix','gaming','spiele','game'],
+        responses: [
+          'Sit nöd immer vor em Bildschirm! 👀 Das tuet de Augä nöd guet!',
+          'Ich verstah nüt vo däm! 📱 Aber solangs di glücklich macht, ja wo...',
+          'Scho wieder am Handy?? 🤨 Gang chli use an frischi Luft!',
+          'Ds Internet isch gfährlich! 🔒 Pass uuf was du da munsch!',
+          'Du programmiersch? 💻 Wow, mein Schatz isch e Informatiker! Aber gang au mal use!',
+        ]
+      },
+      sorry: {
+        triggers: ['sorry','entschuldigung','verzeih','falsch','mein fehler','tut mir leid','schuld','upsi'],
+        responses: [
+          'Das isch guet! 🤗 Es chunnt vor! Mami vergibt immer!',
+          'Ach Liebling, mach dir kei Gedanke! ❤️ Mir sind Familie!',
+          'Kei Thema! 😊 Was wär e Mami ohni z vergebe, ha!',
+        ]
+      },
+      agreement: {
+        triggers: ['ja','jo','jo','si','ok','okay','sicher','klar','natürlich','natürli','genau','richtig','wohl','eh','ha'],
+        responses: [
+          'Guet! 👍 Dann isch ja alles klar!',
+          'Ja wo! 😊 Das freut mi!',
+          'Das wott i höre! 🥰',
+        ]
+      },
+      denial: {
+        triggers: ['nei','nö','nöi','nein','nai','kain','kein','nix','nüt','nichts','gar nöd','auf keinen','kaum','niemals'],
+        responses: [
+          'Wieso nöd?? 🤨 Das isch doch wichtig!',
+          'Hm, also? 🤔 Sags mer richtig!',
+          'Na guet, aber überlegs dir nomal! 😊',
+        ]
+      },
+      question: {
+        triggers: ['wie','was','wieso','warum','wo','wänn','wann','welem','welche','welcher','weli','häsches','chasch','wottsch','chönnt','soll'],
+        responses: [
+          'Das isch e gueti Frog! 🤔 Lass mi nachdänke...',
+          'Hm, da weiss i au nöd genau! 😅 Frag doch beim Profi nach!',
+          'Mami weiss alles! 😄 Au wenns lang duurt zum erkläre!',
+          'Das chasch nöd so schnell froge! 🤨 Gseht me sich ds Wochenende?',
+        ]
+      },
+      happy: {
+        triggers: ['glücklich','freu','fröhlich','happy','super','prima','fantastisch','bestens','mega','geil','awesome','great','best day','chille','chill'],
+        responses: [
+          'Das freut mi so!! 😍🥰 Ich bin au glücklich weni hör!',
+          'Mein Schatz isch glücklich, dann bin i au glücklich! ❤️',
+          'Wunderschön! 🌟 Das chasch de nöiiste eigentli! Immer optimismus!',
+        ]
+      },
+      sad: {
+        triggers: ['traurig','schnuuf','chrieg','problem','schlecht','böse','wütend','stressig','nervös','ängstlich','ängst','down','deprimiert','alleine','einsam','lonely','crying','heule','weine'],
+        responses: [
+          'Oh nein, was isch los?? 😢 Erzähl mer alles! Mami seit zue!',
+          'Komm her! 🤗 Alles wird guet! I bi für di da!',
+          'Arm Seeli! 💕 Das git au wieder! Du bisch starch!',
+          'Weisch was helft? En heisse Tee und e Umarmig! ☕🫂 Ich chumm wenn du wittsch!',
+        ]
+      },
+    };
+
+    // ── Dynamic time responses ──
+    function getTimeContext() {
+      const h = new Date().getHours();
+      if (h < 6) return { time: 'fast 6 am Morgä', greeting: 'Was machsch no wach?? Gang schloof! 😴' };
+      if (h < 9) return { time: h + ' am Morgä', greeting: 'Guten Morgen! ☀️ Hesch scho gässe?' };
+      if (h < 12) return { time: h + ' am Vormittag', greeting: 'Schaffsch scho? 😊 Vergiss s Znüni nöd!' };
+      if (h < 14) return { time: h + ' am Mittag', greeting: 'Hesch scho Zmittag gha? 🍽️' };
+      if (h < 17) return { time: h + ' am Namittag', greeting: 'Wie lauft de Tag? 😊' };
+      if (h < 20) return { time: h + ' am Aabig', greeting: 'Guten Aabig! Hesch scho Znacht gha? 🌙' };
+      return { time: 'fast ' + (h - 12) + ' z Nacht', greeting: 'Es isch spät!! Gang schloof!! 😤🛏️' };
+    }
+
+    // ── Mood transitions ──
+    function updateMood(text) {
+      const t = text.toLowerCase();
+      if (MAMI_RESPONSES.swear.triggers.some(s => t.includes(s))) mamiMood = 'annoyed';
+      else if (MAMI_RESPONSES.happy.triggers.some(s => t.includes(s)) || MAMI_RESPONSES.thanks.triggers.some(s => t.includes(s))) mamiMood = 'happy';
+      else if (MAMI_RESPONSES.sad.triggers.some(s => t.includes(s)) || MAMI_RESPONSES.health.triggers.some(s => t.includes(s))) mamiMood = 'worried';
+      else if (MAMI_RESPONSES.love.triggers.some(s => t.includes(s)) || MAMI_RESPONSES.compliment.triggers.some(s => t.includes(s))) mamiMood = 'proud';
+      else if (mamiMood === 'annoyed') mamiMood = 'loving'; // cool down
+    }
+
+    // ── Generate response ──
+    function generateMamiResponse(text) {
+      const t = text.toLowerCase().replace(/[!?.,;:'"]/g, '').trim();
+      updateMood(t);
+
+      const tc = getTimeContext();
+
+      // Find matching topics
+      let matched = [];
+      Object.entries(MAMI_RESPONSES).forEach(([key, data]) => {
+        if (data.triggers.some(trigger => t.includes(trigger))) {
+          matched.push(key);
+          lastTopics.push(key);
+        }
+      });
+      if (lastTopics.length > 5) lastTopics = lastTopics.slice(-5);
+
+      // Build response
+      let parts = [];
+
+      // Time-based comment (sometimes)
+      if (msgCount % 3 === 0) {
+        const h = new Date().getHours();
+        if (h >= 22) parts.push(randomPick(['Es isch aber spät!! 😤', 'Gang ins Bett!! 🛏️', 'Was machsch no wach?? 😴', 'Am Morgä bisch wieder müed!']));
+        else if (h < 7) parts.push(randomPick(['Uff, bisch early wach! 🌅', 'Hesch überhaupt gschlofe?? 😅', 'Das isch aber z früeh!']));
+      }
+
+      // Topic response
+      if (matched.length > 0) {
+        const primary = matched[0];
+        const data = MAMI_RESPONSES[primary];
+        let resp = randomPick(data.responses);
+        resp = resp.replace('[zeit]', tc.time);
+        parts.push(resp);
+
+        // Add follow-up from another topic sometimes
+        if (matched.length > 1 && Math.random() > 0.5) {
+          const secondary = matched[matched.length - 1];
+          const secData = MAMI_RESPONSES[secondary];
+          parts.push(randomPick(secData.responses));
+        }
+      }
+
+      // Fallback - generic motherly responses
+      if (parts.length === 0) {
+        parts.push(randomPick([
+          'Hm, interesting! 🤔 Erzähl mer meh!',
+          'Ja wo, und wieso sagsch mer da? 😊',
+          'Ach Liebling, ich weiss nöd genau was du meinsch, aber ich gseh mer das mit! 🤗',
+          'Das isch guet! 👍 Aber vergiss nöd: gähn und schloofe!',
+          'Mami verstoot das nöd ganz, aber solangs di glücklich macht! 😄',
+          'Hmm! 🤨 Und was willsch du jetzt genau?',
+          'Ja ja, die junge Lüt hüt! 😅 Zmeine Zite isch das anders gsi!',
+          'Ich glaube du bisch uem dreisig Johr z jung für mich! 🤷‍♀️ Aber go weiter!',
+          'Sachtisch du öppis, oder schicksch nur Emoji?? 😂',
+          'Du chasch mer immer schrybe, wänn du wittsch! Ich bi immer do! ❤️',
+        ]));
+      }
+
+      // Random motherly add-on (30% chance)
+      if (Math.random() > 0.7 && msgCount > 2) {
+        parts.push(randomPick([
+          'Übrigens: Hesch scho Wasser trunke? 💧',
+          'D Grossmuetter grüesst au! 👵',
+          'Soll i dr es Paket schicke? 📦',
+          'D Nächscht wott di au mal wiedr gseh! 😊',
+          'Hesch scho an Weihnachte dänkt? 🎄',
+          'Ich ha am Sonntig es Guetz gmacht! 🥧 Wänn chunsch du?',
+          'De Papa fragt: Bisch am Wuchenend da? 🏠',
+          'Ich ha d Photos vo dir aagluegt! So gross bisch wordle! 😭❤️',
+        ]));
+      }
+
+      return parts.join(' ');
+    }
+
+    function randomPick(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    function timeStr() {
+      const n = new Date();
+      return n.getHours().toString().padStart(2, '0') + ':' + n.getMinutes().toString().padStart(2, '0');
+    }
+
+    function addMsg(text, sender) {
+      const div = document.createElement('div');
+      div.className = 'msg ' + sender;
+      div.innerHTML = text + '<span class="time">' + timeStr() + '</span>';
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function addTyping() {
+      const div = document.createElement('div');
+      div.className = 'typing';
+      div.id = 'typingIndicator';
+      div.textContent = 'Mami tippt...';
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function removeTyping() {
+      const el = document.getElementById('typingIndicator');
+      if (el) el.remove();
+    }
+
+    function sendMessage() {
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = '';
+      addMsg(text, 'ich');
+      msgCount++;
+
+      // Mami "types" for a bit
+      const delay = 600 + Math.random() * 1400 + text.length * 20;
+      addTyping();
+
+      setTimeout(() => {
+        removeTyping();
+        const response = generateMamiResponse(text);
+        addMsg(response, 'mami');
+      }, delay);
+    }
+
+    function sendEmoji(emoji) {
+      addMsg(emoji, 'ich');
+      msgCount++;
+      addTyping();
+      setTimeout(() => {
+        removeTyping();
+        // Emoji responses
+        const emojiResponses = {
+          '❤️': ['❤️❤️❤️ Ich ha di au lieb!!', 'Liebe Grüess! 😘', 'Das wäri von Herzen! ❤️'],
+          '😊': ['Wieso lachsch du? 😄', 'Es freut mi dich z gseh! 🥰', 'Lach meh! Das tuet guet! 😊'],
+          '😂': ['Was isch so lustig?? 😂', 'Haha, teils! 😆', 'Lach chli leiser, de Papa schloft! 🤫😂'],
+          '🙏': ['Kei Problem! 🤗', 'Das mach doch e Mami! ❤️', 'Wofür danksch du? 😊'],
+          '😅': ['Was isch passiert?? 😅', 'Haha, okey! 😄', 'Sags mer ehrlich! 🤨'],
+          '😘': ['Ach!! 😘😘😘', 'Chussi! 😘', 'Liebling! ❤️'],
+          '👋': ['Tschüss!! 👋 Bis bald!', 'Ciao mein Schatz! 🤗', 'Machs guet! 👋❤️'],
+          '😴': ['Gang schloof!! 😤', 'Ja, du bisch müed! Mach zue! 🛏️', 'Gute Nacht! 💤'],
+        };
+        const responses = emojiResponses[emoji] || ['🤗', '😊', '❤️'];
+        addMsg(randomPick(responses), 'mami');
+      }, 800 + Math.random() * 800);
+    }
+
+    function startChat() {
+      document.getElementById('startOverlay').classList.add('hidden');
+      // First message from Mami
+      setTimeout(() => {
+        const h = new Date().getHours();
+        let greeting;
+        if (h < 9) greeting = 'Guten Morgen Liebling! ☀️ Hesch scho gässe? Oder bisch no im Bett?! 😤';
+        else if (h < 12) greeting = 'Hoi Schätzli! 🥰 Wie gohts dir am Vormittag? Alles guet?';
+        else if (h < 17) greeting = 'Hoi! 😊 Hesch scho Zmittag gha? Was machsch so?';
+        else if (h < 21) greeting = 'Guten Aabig! 🌙 Was machsch no wach? Hesch scho Znacht gha?';
+        else greeting = 'Mein Gott, es isch spät!! 😤 Was machsch no wach?! Gang schloof!!';
+        addMsg(greeting, 'mami');
+      }, 600);
+    }
+
+    // Focus input on load
+    input.focus();
+  </script>
+</body>
+</html>
