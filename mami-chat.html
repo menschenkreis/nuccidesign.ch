@@ -63,7 +63,7 @@
 var ch=document.getElementById('ch'),inp=document.getElementById('inp'),mc=0,usedR={};
 function ts(){var n=new Date();return('0'+n.getHours()).slice(-2)+':'+('0'+n.getMinutes()).slice(-2)}
 function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML}
-function am(t,s){var d=document.createElement('div');d.className='m '+(s==='mami'?'l':'r');var span=document.createElement('span');span.className='t';span.textContent=ts();d.innerHTML=(s==='ich'?esc(t):t);d.appendChild(span);ch.appendChild(d);ch.scrollTop=ch.scrollHeight}
+function am(t,s){var d=document.createElement('div');d.className='m '+(s==='mami'?'l':'r');var txt=document.createElement('span');txt.innerHTML=(s==='ich'?esc(t):t);var tim=document.createElement('span');tim.className='t';tim.textContent=ts();d.appendChild(txt);d.appendChild(tim);ch.appendChild(d);ch.scrollTop=ch.scrollHeight}
 function at(){var d=document.createElement('div');d.className='ty';d.id='ty';d.textContent='Mami tippt...';ch.appendChild(d);ch.scrollTop=ch.scrollHeight}
 function rt(){var e=document.getElementById('ty');if(e)e.parentNode.removeChild(e)}
 function rp(a,k){if(!k)return a[Math.floor(Math.random()*a.length)];if(!usedR[k])usedR[k]=[];var avail=[];for(var i=0;i<a.length;i++){if(usedR[k].indexOf(i)===-1)avail.push(i)}if(avail.length===0){usedR[k]=[];avail=a.map(function(_,i){return i})}var idx=avail[Math.floor(Math.random()*avail.length)];usedR[k].push(idx);return a[idx]}
