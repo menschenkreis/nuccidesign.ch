@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Schattenparallel — NucciDesigner</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap');
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      font-family: 'Inter', sans-serif; background: #000; color: #e8e8ed;
+      overflow: hidden; height: 100vh; height: 100dvh;
+      -webkit-font-smoothing: antialiased; touch-action: none; user-select: none;
+    }
+    canvas { display: block; width: 100%; height: 100%; }
+    .overlay {
+      position: fixed; inset: 0; z-index: 10;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.8); backdrop-filter: blur(12px);
+      transition: opacity 0.4s; padding: 20px;
+    }
+    .overlay.hidden { opacity: 0; pointer-events: none; }
+    .title { font-size: clamp(1.8rem, 7vw, 3.2rem); font-weight: 900; letter-spacing: -0.04em; text-align: center; margin-bottom: 6px; line-height: 1.15; }
+    .title .glow { color: #c44dff; text-shadow: 0 0 30px rgba(196,77,255,0.5); }
+    .title .dark { color: #60a5fa; text-shadow: 0 0 30px rgba(96,165,250,0.5); }
+    .subtitle { color: rgba(255,255,255,0.45); font-size: 0.82rem; text-align: center; margin-bottom: 24px; line-height: 1.6; max-width: 340px; }
+    .play-btn {
+      padding: 16px 48px; border-radius: 100px; border: none;
+      background: linear-gradient(135deg, #c44dff, #60a5fa); color: white;
+      font-size: 1rem; font-weight: 800; font-family: 'Inter', sans-serif;
+      cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .play-btn:hover { transform: scale(1.05); box-shadow: 0 8px 30px rgba(196,77,255,0.4); }
+    .play-btn:active { transform: scale(0.95); }
+    .instructions { color: rgba(255,255,255,0.35); font-size: 0.7rem; margin-top: 20px; text-align: center; line-height: 1.9; max-width: 300px; }
+    .instructions strong { color: rgba(255,255,255,0.55); }
+    .back-link {
+      position: fixed; top: 16px; left: 16px; z-index: 20;
+      color: rgba(255,255,255,0.4); text-decoration: none; font-size: 0.82rem; font-weight: 600;
+      padding: 8px 14px; border-radius: 100px; border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(0,0,0,0.3); backdrop-filter: blur(8px); transition: all 0.2s;
+    }
+    .back-link:hover { color: white; border-color: rgba(255,255,255,0.3); }
+    .hud {
+      position: fixed; top: 16px; left: 16px; right: 16px; z-index: 20;
+      display: flex; justify-content: space-between; pointer-events: none;
+    }
+    .hud .badge {
+      padding: 6px 14px; border-radius: 100px;
+      background: rgba(0,0,0,0.4); backdrop-filter: blur(8px);
+      font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; font-weight: 700;
+      color: rgba(255,255,255,0.7);
+    }
+    .hud .badge .v { color: #c44dff; }
+    .hud .badge .b { color: #60a5fa; }
+    .hud .deaths { color: #ef4444; font-weight: 700; }
+    .level-banner {
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      z-index: 25; font-size: 1.5rem; font-weight: 900;
+      opacity: 0; transition: opacity 0.3s; pointer-events: none;
+      text-align: center;
+    }
+    .level-banner.show { opacity: 1; }
+    .game-over .final { font-family: 'JetBrains Mono', monospace; font-size: 2rem; font-weight: 900; color: #c44dff; margin: 8px 0; }
+    .game-over .stats { color: rgba(255,255,255,0.45); font-size: 0.82rem; margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <a href="index.html" class="back-link">← Zrugg</a>
+  <div class="hud" id="hud" style="display:none;">
+    <div class="badge">Level <span class="v" id="hudLevel">1</span></div>
+    <div class="badge deaths" id="hudDeaths">💀 0</div>
+  </div>
+  <div class="level-banner" id="levelBanner"></div>
+  <canvas id="game"></canvas>
+
+  <div class="overlay" id="startScreen">
+    <div class="title"><span class="glow">Schatten</span><br><span class="dark">parallel</span></div>
+    <div class="subtitle">Du spielst ZWEI Welten gleichzeitig. Was im Licht sicher ist, kann im Schatten tödlich sein — und umgekehrt.</div>
+    <button class="play-btn" id="startBtn">⚡ Los geht's!</button>
+    <div class="instructions">
+      <strong>↑↓←→ / Swipe</strong> zum Bewegen<br>
+      <strong>Licht-Welt</strong> (oben) & <strong>Schatten-Welt</strong> ( unten)<br>
+      Beide Charaktere bewegen sich GLEICHZEITIG<br>
+      <strong>✨ Lichtsiegel</strong> bringen beide zum Ziel<br>
+      <strong>⚠️ Gefahren</strong> existieren nur in EINER Welt!<br>
+      Du musst einen Weg finden, der für BEIDE funktioniert
+    </div>
+  </div>
+
+  <div class="overlay hidden game-over" id="gameOver">
+    <div class="title">😵 Geschafft!</div>
+    <div class="final" id="finalLevel">Level 1</div>
+    <div class="stats" id="finalStats"></div>
+    <button class="play-btn" id="restartBtn">🔄 Nochmal</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const hud = document.getElementById('hud');
+    const hudLevel = document.getElementById('hudLevel');
+    const hudDeaths = document.getElementById('hudDeaths');
+    const levelBanner = document.getElementById('levelBanner');
+    const startScreen = document.getElementById('startScreen');
+    const gameOverScreen = document.getElementById('gameOver');
+
+    let W, H, dpr;
+    let state = 'menu';
+    let level = 1, deaths = 0;
+    let frameCount = 0;
+
+    // Two halves
+    const HALF_H = () => H / 2 - 20;
+    const LIGHT_TOP = 60;
+    const SHADOW_TOP = () => H / 2 + 20;
+    const PLATE_H = () => H / 2 - 80;
+
+    // Player size
+    const PS = 14;
+
+    // Player (both worlds mirror)
+    let px, py;
+    let lightWalls, shadowWalls, lightSpikes, shadowSpikes;
+    let lightGoal, shadowGoal;
+    let lightCollected, shadowCollected;
+
+    // Input
+    let keys = {};
+    let touchStart = null;
+    let touchDir = { x: 0, y: 0 };
+    let moveQueue = [];
+
+    function resize() {
+      dpr = window.devicePixelRatio || 1;
+      W = window.innerWidth;
+      H = window.innerHeight;
+      canvas.width = W * dpr;
+      canvas.height = H * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    resize();
+    window.addEventListener('resize', () => { resize(); if (state === 'playing') loadLevel(level); });
+
+    // ── Level generation ──
+    function loadLevel(lvl) {
+      const pw = W * 0.9, ph = PLATE_H();
+      const ox = (W - pw) / 2;
+      const lightY = LIGHT_TOP;
+      const shadowY = SHADOW_TOP();
+      const gs = 22; // grid size
+      const cols = Math.floor(pw / gs);
+      const rows = Math.floor(ph / gs);
+
+      // Start position
+      px = ox + gs * 1.5;
+      py = gs * 1.5;
+
+      lightWalls = []; shadowWalls = [];
+      lightSpikes = []; shadowSpikes = [];
+      lightGoal = null; shadowGoal = null;
+      lightCollected = false; shadowCollected = false;
+
+      const wallChance = Math.min(0.18 + lvl * 0.03, 0.35);
+      const spikeChance = Math.min(0.06 + lvl * 0.02, 0.18);
+
+      // Generate maze-like walls using a seed
+      function seededRandom(seed) {
+        let s = seed;
+        return () => { s = (s * 16807 + 0) % 2147483647; return s / 2147483647; };
+      }
+      const rng = seededRandom(lvl * 7919 + 1337);
+      const rng2 = seededRandom(lvl * 6271 + 42);
+
+      // Border walls
+      for (let c = 0; c < cols; c++) {
+        lightWalls.push({ x: ox + c * gs, y: lightY, w: gs, h: gs });
+        lightWalls.push({ x: ox + c * gs, y: lightY + (rows - 1) * gs, w: gs, h: gs });
+        shadowWalls.push({ x: ox + c * gs, y: shadowY, w: gs, h: gs });
+        shadowWalls.push({ x: ox + c * gs, y: shadowY + (rows - 1) * gs, w: gs, h: gs });
+      }
+      for (let r = 0; r < rows; r++) {
+        lightWalls.push({ x: ox, y: lightY + r * gs, w: gs, h: gs });
+        lightWalls.push({ x: ox + (cols - 1) * gs, y: lightY + r * gs, w: gs, h: gs });
+        shadowWalls.push({ x: ox, y: shadowY + r * gs, w: gs, h: gs });
+        shadowWalls.push({ x: ox + (cols - 1) * gs, y: shadowY + r * gs, w: gs, h: gs });
+      }
+
+      // Random internal walls - LIGHT world
+      for (let r = 2; r < rows - 2; r++) {
+        for (let c = 2; c < cols - 2; c++) {
+          if (r < 4 && c < 4) continue; // keep start clear
+          if (r > rows - 5 && c > cols - 5) continue; // keep goal clear
+          if (rng() < wallChance) {
+            lightWalls.push({ x: ox + c * gs, y: lightY + r * gs, w: gs, h: gs });
+          }
+        }
+      }
+
+      // SHADOW world: different wall pattern (mirrored surprise!)
+      for (let r = 2; r < rows - 2; r++) {
+        for (let c = 2; c < cols - 2; c++) {
+          if (r < 4 && c < 4) continue;
+          if (r > rows - 5 && c > cols - 5) continue;
+          // Inverse: where light has walls, shadow often doesn't (and vice versa)
+          const lightHasWall = lightWalls.some(w => w.x === ox + c * gs && w.y === lightY + r * gs);
+          if (lightHasWall) {
+            if (rng2() < 0.3) shadowWalls.push({ x: ox + c * gs, y: shadowY + r * gs, w: gs, h: gs });
+          } else {
+            if (rng2() < wallChance * 0.7) shadowWalls.push({ x: ox + c * gs, y: shadowY + r * gs, w: gs, h: gs });
+          }
+        }
+      }
+
+      // Spikes — only in ONE world each (the twist!)
+      for (let r = 2; r < rows - 2; r++) {
+        for (let c = 2; c < cols - 2; c++) {
+          const lx = ox + c * gs, ly = lightY + r * gs;
+          if (lightWalls.some(w => w.x === lx && w.y === ly)) continue;
+          if (shadowWalls.some(w => w.x === lx && w.y === shadowY + r * gs)) continue;
+          if (r < 4 && c < 4) continue;
+          if (r > rows - 5 && c > cols - 5) continue;
+
+          if (rng() < spikeChance) {
+            // Put spikes in only ONE world (randomly)
+            if (rng() > 0.5) {
+              lightSpikes.push({ x: lx + 2, y: ly + 2, w: gs - 4, h: gs - 4 });
+            } else {
+              shadowSpikes.push({ x: lx + 2, y: shadowY + r * gs + 2, w: gs - 4, h: gs - 4 });
+            }
+          }
+        }
+      }
+
+      // Goals (mirrored position)
+      const goalC = cols - 3, goalR = rows - 3;
+      lightGoal = { x: ox + goalC * gs, y: lightY + goalR * gs, w: gs, h: gs };
+      shadowGoal = { x: ox + goalC * gs, y: shadowY + goalR * gs, w: gs, h: gs };
+
+      showBanner(`Level ${lvl}`, lvl > 1 ? 'Die Welten verschieben sich...' : 'Finde den Weg für BEIDE Welten!');
+    }
+
+    function showBanner(title, sub) {
+      levelBanner.innerHTML = `${title}<br><span style="font-size:0.7rem;color:rgba(255,255,255,0.4)">${sub}</span>`;
+      levelBanner.classList.add('show');
+      setTimeout(() => levelBanner.classList.remove('show'), 2000);
+    }
+
+    // ── Collision ──
+    function rectCollide(ax, ay, aw, ah, bx, by, bw, bh) {
+      return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
+    }
+
+    function isBlocked(nx, ny, walls) {
+      for (const w of walls) {
+        if (rectCollide(nx, ny, PS, PS, w.x, w.y, w.w, w.h)) return true;
+      }
+      return false;
+    }
+
+    function hitsSpikes(x, y, spikes) {
+      for (const s of spikes) {
+        if (rectCollide(x, y, PS, PS, s.x, s.y, s.w, s.h)) return true;
+      }
+      return false;
+    }
+
+    // ── Movement ──
+    function tryMove(dx, dy) {
+      if (state !== 'playing') return;
+      const nx = px + dx;
+      const ny = py + dy;
+
+      const lightBlocked = isBlocked(nx, ny, lightWalls);
+      const shadowBlocked = isBlocked(nx, ny, shadowWalls);
+
+      // If blocked in BOTH worlds — can't move
+      if (lightBlocked && shadowBlocked) return;
+
+      // If blocked in one world but not the other — can still move (parallel dimension!)
+      px = nx;
+      py = ny;
+
+      // Check spikes in each world
+      if (hitsSpikes(px, py, lightSpikes) || hitsSpikes(px, py, shadowSpikes)) {
+        die();
+        return;
+      }
+
+      // Check goals
+      if (!lightCollected && rectCollide(px, py, PS, PS, lightGoal.x, lightGoal.y, lightGoal.w, lightGoal.h)) {
+        lightCollected = true;
+      }
+      if (!shadowCollected && rectCollide(px, py, PS, PS, shadowGoal.x, shadowGoal.y, shadowGoal.w, shadowGoal.h)) {
+        shadowCollected = true;
+      }
+
+      // Both goals collected = level complete!
+      if (lightCollected && shadowCollected) {
+        level++;
+        loadLevel(level);
+      }
+    }
+
+    function die() {
+      deaths++;
+      hudDeaths.textContent = `💀 ${deaths}`;
+      loadLevel(level);
+      // Flash
+      document.body.style.background = 'rgba(239,68,68,0.15)';
+      setTimeout(() => document.body.style.background = '#000', 150);
+    }
+
+    // ── Drawing ──
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+
+      const pw = W * 0.9;
+      const ox = (W - pw) / 2;
+
+      // ── LIGHT WORLD (top half) ──
+      // Background
+      const lgr = ctx.createLinearGradient(0, 0, 0, H / 2);
+      lgr.addColorStop(0, '#1a0a2e');
+      lgr.addColorStop(1, '#2d1054');
+      ctx.fillStyle = lgr;
+      ctx.fillRect(0, 0, W, H / 2);
+
+      // Border glow
+      ctx.strokeStyle = 'rgba(196,77,255,0.3)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(ox - 1, LIGHT_TOP - 1, pw + 2, PLATE_H() + 2);
+
+      // Walls
+      lightWalls.forEach(w => {
+        ctx.fillStyle = '#3d1f6d';
+        ctx.fillRect(w.x, w.y, w.w, w.h);
+        ctx.strokeStyle = 'rgba(196,77,255,0.2)';
+        ctx.lineWidth = 0.5;
+        ctx.strokeRect(w.x, w.y, w.w, w.h);
+      });
+
+      // Spikes
+      lightSpikes.forEach(s => {
+        ctx.fillStyle = '#ef4444';
+        ctx.shadowColor = '#ef4444';
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.moveTo(s.x + s.w / 2, s.y);
+        ctx.lineTo(s.x + s.w, s.y + s.h);
+        ctx.lineTo(s.x, s.y + s.h);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      });
+
+      // Goal
+      if (lightGoal) {
+        const pulse = Math.sin(frameCount * 0.08) * 0.3 + 0.7;
+        ctx.fillStyle = lightCollected ? 'rgba(52,211,153,0.3)' : `rgba(52,211,153,${pulse * 0.4})`;
+        ctx.fillRect(lightGoal.x, lightGoal.y, lightGoal.w, lightGoal.h);
+        if (!lightCollected) {
+          ctx.shadowColor = '#34d399';
+          ctx.shadowBlur = 12;
+          ctx.font = `${lightGoal.w * 0.7}px sans-serif`;
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText('✨', lightGoal.x + lightGoal.w / 2, lightGoal.y + lightGoal.h / 2);
+          ctx.shadowBlur = 0;
+        } else {
+          ctx.font = `${lightGoal.w * 0.7}px sans-serif`;
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText('✅', lightGoal.x + lightGoal.w / 2, lightGoal.y + lightGoal.h / 2);
+        }
+      }
+
+      // Player (light)
+      if (state === 'playing') {
+        ctx.shadowColor = '#c44dff';
+        ctx.shadowBlur = 15;
+        ctx.fillStyle = '#c44dff';
+        ctx.beginPath();
+        ctx.arc(px + PS / 2, LIGHT_TOP + py + PS / 2, PS / 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(px + PS / 2, LIGHT_TOP + py + PS / 2, PS / 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+
+      // Label
+      ctx.fillStyle = 'rgba(196,77,255,0.5)';
+      ctx.font = '600 0.65rem Inter, sans-serif';
+      ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+      ctx.fillText('✨ LICHT', ox, LIGHT_TOP - 16);
+
+      // ── DIVIDER ──
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 8]);
+      ctx.beginPath();
+      ctx.moveTo(0, H / 2);
+      ctx.lineTo(W, H / 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // ── SHADOW WORLD (bottom half) ──
+      const sgr = ctx.createLinearGradient(0, H / 2, 0, H);
+      sgr.addColorStop(0, '#0a1628');
+      sgr.addColorStop(1, '#0a0a1a');
+      ctx.fillStyle = sgr;
+      ctx.fillRect(0, H / 2, W, H / 2);
+
+      // Border glow
+      ctx.strokeStyle = 'rgba(96,165,250,0.3)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(ox - 1, SHADOW_TOP() - 1, pw + 2, PLATE_H() + 2);
+
+      // Walls
+      shadowWalls.forEach(w => {
+        ctx.fillStyle = '#1a2a4a';
+        ctx.fillRect(w.x, w.y, w.w, w.h);
+        ctx.strokeStyle = 'rgba(96,165,250,0.15)';
+        ctx.lineWidth = 0.5;
+        ctx.strokeRect(w.x, w.y, w.w, w.h);
+      });
+
+      // Spikes
+      shadowSpikes.forEach(s => {
+        ctx.fillStyle = '#f97316';
+        ctx.shadowColor = '#f97316';
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.moveTo(s.x + s.w / 2, s.y);
+        ctx.lineTo(s.x + s.w, s.y + s.h);
+        ctx.lineTo(s.x, s.y + s.h);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      });
+
+      // Goal
+      if (shadowGoal) {
+        const pulse = Math.sin(frameCount * 0.08) * 0.3 + 0.7;
+        ctx.fillStyle = shadowCollected ? 'rgba(52,211,153,0.3)' : `rgba(52,211,153,${pulse * 0.4})`;
+        ctx.fillRect(shadowGoal.x, shadowGoal.y, shadowGoal.w, shadowGoal.h);
+        if (!shadowCollected) {
+          ctx.shadowColor = '#34d399';
+          ctx.shadowBlur = 12;
+          ctx.font = `${shadowGoal.w * 0.7}px sans-serif`;
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText('✨', shadowGoal.x + shadowGoal.w / 2, shadowGoal.y + shadowGoal.h / 2);
+          ctx.shadowBlur = 0;
+        } else {
+          ctx.font = `${shadowGoal.w * 0.7}px sans-serif`;
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText('✅', shadowGoal.x + shadowGoal.w / 2, shadowGoal.y + shadowGoal.h / 2);
+        }
+      }
+
+      // Player (shadow)
+      if (state === 'playing') {
+        ctx.shadowColor = '#60a5fa';
+        ctx.shadowBlur = 15;
+        ctx.fillStyle = '#60a5fa';
+        ctx.beginPath();
+        ctx.arc(px + PS / 2, SHADOW_TOP() + py + PS / 2, PS / 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#1a2a4a';
+        ctx.beginPath();
+        ctx.arc(px + PS / 2, SHADOW_TOP() + py + PS / 2, PS / 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+
+      // Label
+      ctx.fillStyle = 'rgba(96,165,250,0.5)';
+      ctx.font = '600 0.65rem Inter, sans-serif';
+      ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+      ctx.fillText('🌑 SCHATTEN', ox, SHADOW_TOP() - 16);
+
+      // ── Connection line between players ──
+      if (state === 'playing') {
+        const pulse = Math.sin(frameCount * 0.05) * 0.15 + 0.15;
+        ctx.strokeStyle = `rgba(255,255,255,${pulse})`;
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 6]);
+        ctx.beginPath();
+        ctx.moveTo(px + PS / 2, LIGHT_TOP + py + PS / 2);
+        ctx.lineTo(px + PS / 2, SHADOW_TOP() + py + PS / 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      frameCount++;
+    }
+
+    // ── Game loop ──
+    function loop() {
+      draw();
+      requestAnimationFrame(loop);
+    }
+    loop();
+
+    // ── Input handling ──
+    let moveInterval = null;
+    let lastMoveDir = null;
+
+    function startMoving(dx, dy) {
+      stopMoving();
+      lastMoveDir = { dx, dy };
+      tryMove(dx, dy);
+      moveInterval = setInterval(() => tryMove(dx, dy), 100);
+    }
+
+    function stopMoving() {
+      if (moveInterval) { clearInterval(moveInterval); moveInterval = null; }
+      lastMoveDir = null;
+    }
+
+    document.addEventListener('keydown', e => {
+      if (state !== 'playing') return;
+      const map = { ArrowUp: [0,-1], ArrowDown: [0,1], ArrowLeft: [-1,0], ArrowRight: [1,0],
+                     w: [0,-1], s: [0,1], a: [-1,0], d: [1,0] };
+      if (map[e.key]) {
+        e.preventDefault();
+        startMoving(map[e.key][0], map[e.key][1]);
+      }
+    });
+
+    document.addEventListener('keyup', e => {
+      const map = { ArrowUp: 1, ArrowDown: 1, ArrowLeft: 1, ArrowRight: 1, w: 1, s: 1, a: 1, d: 1 };
+      if (map[e.key]) stopMoving();
+    });
+
+    // Touch / swipe
+    let touchId = null;
+    canvas.addEventListener('touchstart', e => {
+      e.preventDefault();
+      if (state !== 'playing') return;
+      const t = e.touches[0];
+      touchStart = { x: t.clientX, y: t.clientY };
+      touchId = t.identifier;
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', e => {
+      e.preventDefault();
+      if (state !== 'playing' || !touchStart) return;
+      const t = Array.from(e.touches).find(tt => tt.identifier === touchId);
+      if (!t) return;
+      const dx = t.clientX - touchStart.x;
+      const dy = t.clientY - touchStart.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist > 10) {
+        const gs = W * 0.9 / Math.floor(W * 0.9 / 22); // grid size
+        const step = gs;
+        if (Math.abs(dx) > Math.abs(dy)) {
+          startMoving(dx > 0 ? step : -step, 0);
+        } else {
+          startMoving(0, dy > 0 ? step : -step);
+        }
+        touchStart = { x: t.clientX, y: t.clientY };
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', e => {
+      for (const t of e.changedTouches) {
+        if (t.identifier === touchId) { stopMoving(); touchStart = null; touchId = null; }
+      }
+    });
+
+    // ── Start ──
+    function startGame() {
+      level = 1; deaths = 0;
+      state = 'playing';
+      startScreen.classList.add('hidden');
+      gameOverScreen.classList.add('hidden');
+      hud.style.display = 'flex';
+      hudLevel.textContent = '1';
+      hudDeaths.textContent = '💀 0';
+      loadLevel(level);
+    }
+
+    function showGameOver() {
+      state = 'over';
+      hud.style.display = 'none';
+      document.getElementById('finalLevel').textContent = `Level ${level}`;
+      document.getElementById('finalStats').textContent = `${deaths} Tode · Du bist ein Schatten-Meister!`;
+      gameOverScreen.classList.remove('hidden');
+    }
+
+    document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('restartBtn').addEventListener('click', startGame);
+  </script>
+</body>
+</html>
