@@ -31,6 +31,8 @@
     .cat-label{font-size:.7rem;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.05em;margin:10px 0 6px;display:flex;align-items:center;gap:6px}
     .cat-label:first-child{margin-top:0}
     .remove-btn{margin-left:auto;font-size:.6rem;color:rgba(255,255,255,.3);background:rgba(255,255,255,.06);border:none;padding:2px 8px;border-radius:100px;cursor:pointer}
+    .sell-btn{margin-left:4px;font-size:.6rem;color:#fbbf24;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.2);padding:2px 8px;border-radius:100px;cursor:pointer}
+    .sell-btn:active{background:rgba(251,191,36,.25)}
     .items-row{display:flex;flex-wrap:wrap;gap:5px}
     .item{width:42px;height:42px;border-radius:11px;border:2px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);display:flex;align-items:center;justify-content:center;font-size:1.2rem;cursor:pointer;transition:all .15s;position:relative}
     .item:active{transform:scale(.9)}
@@ -106,7 +108,7 @@
     const CW = 440, CH = 680;
     let currentTab = 'wardrobe';
     let totalCoins = 500;
-    let owned = new Set(); // owned item IDs
+    let owned = new Set(['mohawk','suit','leather','platform','crown']); // start with a few premium items
 
     const SKINS = [
       {name:'Hell',color:'#FDDCB5',shadow:'#E8C49A'},
@@ -317,19 +319,32 @@
         const allItems=[...data.items,...customItems.filter(i=>i.cat===cat)];
         allItems.forEach(item=>{
           const el=document.createElement('div');
-          const free=isFree(item.id);
-          el.className='item'+(selected[cat]===item.id?' active':'')+(free?'':' locked');
+          const owned=owned.has(item.id)||item.free||customItems.find(i=>i.id===item.id);
+          el.className='item'+(selected[cat]===item.id?' active':'')+(owned?'':' locked');
           el.textContent=getItemEmoji(cat,item.id);
           el.title=item.label;
-          if(!free){const pt=document.createElement('div');pt.className='price-tag';pt.textContent=item.price+'🪙';el.appendChild(pt)}
+          if(!owned){const pt=document.createElement('div');pt.className='price-tag';pt.textContent=item.price+'🪙';el.appendChild(pt)}
+          else if(item.price){const pt=document.createElement('div');pt.className='price-tag';pt.style.background='rgba(52,211,153,.2)';pt.style.color='#34d399';pt.textContent='✓';el.appendChild(pt)}
           el.onclick=()=>{
-            if(!free){if(totalCoins>=item.price){totalCoins-=item.price;owned.add(item.id);updateCoins();showToast('✅ '+item.label+' gekauft!')}else{showToast('❌ Nicht genug Münzen!');return}}
+            if(!owned){if(totalCoins>=item.price){totalCoins-=item.price;owned.add(item.id);updateCoins();showToast('✅ '+item.label+' gekauft!')}else{showToast('❌ Nicht genug Münzen!');return}}
             selected[cat]=selected[cat]===item.id?null:item.id;buildWardrobe();render();
+          };
+          // Long press / double click to sell
+          el.ondblclick=(e)=>{
+            e.stopPropagation();
+            if(owned&&!item.free&&!customItems.find(i=>i.id===item.id)){
+              const sellPrice=Math.floor((item.price||50)*0.5);
+              owned.delete(item.id);delete selected[cat];totalCoins+=sellPrice;updateCoins();buildWardrobe();render();showToast('💰 '+item.label+' für '+sellPrice+'🪙 verkauft!');
+            }
           };
           row.appendChild(el);
         });
         p.appendChild(row);
       });
+      // Sell hint
+      const hint=document.createElement('div');hint.style.cssText='margin-top:12px;font-size:.6rem;color:rgba(255,255,255,.25);text-align:center';
+      hint.textContent='💡 Doppeltippen auf ein gekauftes Teil = verkaufen (50% Rückgabe)';
+      p.appendChild(hint);
     }
 
     // ── Designer tab ──
@@ -429,6 +444,11 @@
           if(isOwned){selected[item.cat]=item.id;render();showToast('👍 Angezogen!');return}
           if(totalCoins>=item.price){totalCoins-=item.price;owned.add(item.id);updateCoins();buildShop();showToast('🛒 '+item.label+' gekauft!')}
           else showToast('❌ Nicht genug Münzen! ('+item.price+'🪙)')
+        };
+        // Long press to sell
+        el.ondblclick=(e)=>{
+          e.stopPropagation();
+          if(isOwned){const sp=Math.floor(item.price*0.5);owned.delete(item.id);delete selected[item.cat];totalCoins+=sp;updateCoins();buildShop();render();showToast('💰 '+item.label+' für '+sp+'🪙 verkauft!')}
         };
         p.appendChild(el);
       });
