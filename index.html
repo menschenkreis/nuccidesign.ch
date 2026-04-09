@@ -183,6 +183,50 @@
     .mobile-menu a { color: var(--text-dim); text-decoration: none; font-size: 0.95rem; font-weight: 500; padding: 12px 16px; border-radius: 10px; transition: all 0.25s; }
     .mobile-menu a:hover { color: var(--text); background: rgba(124,106,239,0.08); }
 
+    /* ═══ Playground ═══ */
+    .playground { padding: 120px 0; background: linear-gradient(to bottom, transparent, rgba(124, 106, 239, 0.03), transparent); }
+    .playground-grid { 
+      display: grid; 
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); 
+      gap: 20px; 
+      margin-top: 48px; 
+    }
+    .play-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 32px 24px;
+      text-align: center;
+      text-decoration: none;
+      color: inherit;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+    .play-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(45deg, transparent, rgba(124, 106, 239, 0.1), transparent);
+      transform: translateX(-100%);
+      transition: transform 0.6s ease;
+    }
+    .play-card:hover {
+      transform: translateY(-8px);
+      border-color: var(--accent);
+      background: var(--surface-2);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 20px var(--glow);
+    }
+    .play-card:hover::before { transform: translateX(100%); }
+    .play-card .icon { font-size: 2.5rem; transition: transform 0.3s ease; }
+    .play-card:hover .icon { transform: scale(1.2) rotate(5deg); }
+    .play-card span { font-size: 0.9rem; font-weight: 600; color: var(--text-dim); transition: color 0.3s; }
+    .play-card:hover span { color: var(--text); }
+
     /* ═══ Hero ═══ */
     .hero { min-height: 100vh; display: flex; align-items: center; justify-content: center; text-align: center; padding: 120px 0 80px; position: relative; }
     .hero-line { width: 1px; height: 80px; background: linear-gradient(to bottom, transparent, var(--accent), transparent); margin: 0 auto 40px; animation: line-glow 3s ease-in-out infinite; }
@@ -446,20 +490,9 @@
 
   <div class="mobile-menu" id="mobileMenu">
     <a href="#how-it-works"><span data-en>How It Works</span><span data-de>So funktioniert's</span></a>
+    <a href="#playground"><span data-en>🕹️ Playground</span><span data-de>🕹️ Spielplatz</span></a>
     <a href="#portfolio"><span data-en>Portfolio</span><span data-de>Portfolio</span></a>
     <a href="#faq"><span data-en>FAQ</span><span data-de>FAQ</span></a>
-    <a href="fidgeteria.html"><span data-en>✦ Play</span><span data-de>✦ Spielen</span></a>
-          <a href="tier-abc.html"><span data-en>🐾 ABC</span><span data-de>🐾 ABC</span></a>
-          <a href="age-slider.html"><span data-en>⏳ Age</span><span data-de>⏳ Alter</span></a>
-          <a href="puzzle-cam.html"><span data-en>🧩 Puzzle</span><span data-de>🧩 Puzzle</span></a>
-          <a href="flappy-hammer.html"><span data-en>🦄 Play</span><span data-de>🦄 Spiel</span></a>
-          <a href="duel-pong.html"><span data-en>🏓 Duel</span><span data-de>🏓 Duel</span></a>
-          <a href="einhorn-runner.html"><span data-en>🦄 Einhorn</span><span data-de>🦄 Einhorn</span></a>
-          <a href="schattenparallel.html"><span data-en>⚡ Schatten</span><span data-de>⚡ Schatten</span></a>
-          <a href="kleiderschrank.html"><span data-en>👗 Kleider</span><span data-de>👗 Kleider</span></a>
-          <a href="mami-chat.html"><span data-en>💬 Mami</span><span data-de>💬 Mami</span></a>
-          <a href="coiffeur.html"><span data-en>✂️ Coiffeur</span><span data-de>✂️ Coiffeur</span></a>
-          <a href="handyhuellen-designer.html"><span data-en>📱 Case Designer</span><span data-de>📱 Case Designer</span></a>
   </div>
   <nav id="nav">
     <div class="wrapper">
@@ -470,20 +503,9 @@
       <div style="display:flex; align-items:center; gap:12px;">
         <div class="nav-links">
           <a href="#how-it-works"><span data-en>How It Works</span><span data-de>So funktioniert's</span></a>
+          <a href="#playground"><span data-en>🕹️ Playground</span><span data-de>🕹️ Playground</span></a>
           <a href="#portfolio"><span data-en>Portfolio</span><span data-de>Portfolio</span></a>
           <a href="#faq"><span data-en>FAQ</span><span data-de>FAQ</span></a>
-          <a href="fidgeteria.html"><span data-en>✦ Play</span><span data-de>✦ Spielen</span></a>
-          <a href="tier-abc.html"><span data-en>🐾 ABC</span><span data-de>🐾 ABC</span></a>
-          <a href="age-slider.html"><span data-en>⏳ Age</span><span data-de>⏳ Alter</span></a>
-          <a href="puzzle-cam.html"><span data-en>🧩 Puzzle</span><span data-de>🧩 Puzzle</span></a>
-          <a href="flappy-hammer.html"><span data-en>🦄 Play</span><span data-de>🦄 Spiel</span></a>
-          <a href="duel-pong.html"><span data-en>🏓 Duel</span><span data-de>🏓 Duel</span></a>
-          <a href="einhorn-runner.html"><span data-en>🦄 Einhorn</span><span data-de>🦄 Einhorn</span></a>
-          <a href="schattenparallel.html"><span data-en>⚡ Schatten</span><span data-de>⚡ Schatten</span></a>
-          <a href="kleiderschrank.html"><span data-en>👗 Kleider</span><span data-de>👗 Kleider</span></a>
-          <a href="mami-chat.html"><span data-en>💬 Mami</span><span data-de>💬 Mami</span></a>
-          <a href="coiffeur.html"><span data-en>✂️ Coiffeur</span><span data-de>✂️ Coiffeur</span></a>
-          <a href="handyhuellen-designer.html"><span data-en>📱 Case Designer</span><span data-de>📱 Case Designer</span></a>
         </div>
         <button class="hamburger" id="hamburger" aria-label="Menu"><span></span><span></span><span></span></button>
         <div class="lang-toggle">
@@ -721,6 +743,69 @@
     </section>
 
     <div class="wrapper"><div class="divider"></div></div>
+
+    <!-- ═══ PLAYGROUND ═══ -->
+    <section id="playground" class="playground">
+      <div class="wrapper">
+        <div class="section-header">
+          <h2 class="section-title reveal"><span data-en>Playground</span><span data-de>Spielplatz</span></h2>
+          <p class="section-desc reveal">
+            <span data-en>A collection of interactive experiments, apps, and games built to showcase AI-driven development.</span>
+            <span data-de>Eine Sammlung von interaktiven Experimenten, Apps und Spielen, entwickelt um KI-gestützte Entwicklung zu zeigen.</span>
+          </p>
+        </div>
+        <div class="playground-grid reveal">
+          <a href="fidgeteria.html" class="play-card">
+            <span class="icon">✦</span>
+            <span>Fidgeteria</span>
+          </a>
+          <a href="tier-abc.html" class="play-card">
+            <span class="icon">🐾</span>
+            <span>Tier-ABC</span>
+          </a>
+          <a href="age-slider.html" class="play-card">
+            <span class="icon">⏳</span>
+            <span>Age-Slider</span>
+          </a>
+          <a href="puzzle-cam.html" class="play-card">
+            <span class="icon">🧩</span>
+            <span>Puzzle-Cam</span>
+          </a>
+          <a href="flappy-hammer.html" class="play-card">
+            <span class="icon">🔨</span>
+            <span>Flappy Hammer</span>
+          </a>
+          <a href="duel-pong.html" class="play-card">
+            <span class="icon">🏓</span>
+            <span>Duel Pong</span>
+          </a>
+          <a href="einhorn-runner.html" class="play-card">
+            <span class="icon">🦄</span>
+            <span>Einhorn Runner</span>
+          </a>
+          <a href="schattenparallel.html" class="play-card">
+            <span class="icon">⚡</span>
+            <span>Schattenparallel</span>
+          </a>
+          <a href="kleiderschrank.html" class="play-card">
+            <span class="icon">👗</span>
+            <span>Kleiderschrank</span>
+          </a>
+          <a href="mami-chat.html" class="play-card">
+            <span class="icon">💬</span>
+            <span>Mami Chat</span>
+          </a>
+          <a href="coiffeur.html" class="play-card">
+            <span class="icon">✂️</span>
+            <span>Coiffeur</span>
+          </a>
+          <a href="handyhuellen-designer.html" class="play-card">
+            <span class="icon">📱</span>
+            <span>Case Designer</span>
+          </a>
+        </div>
+      </div>
+    </section>
 
     <!-- ═══ PORTFOLIO ═══ -->
     <section id="portfolio">
