@@ -7,7 +7,7 @@
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
     *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-    body{font-family:'Inter',sans-serif;background:#0a0a0f;color:#e8e8ed;overflow:hidden;height:100vh;display:flex;flex-direction:column;user-select:none;touch-action:none}
+    body{font-family:'Inter',sans-serif;background:#0a0a0f;color:#e8e8ed;overflow:hidden;height:100vh;display:flex;flex-direction:column;user-select:none}
 
     .back-link{position:fixed;top:16px;left:16px;z-index:100;color:rgba(255,255,255,.4);text-decoration:none;font-size:.8rem;font-weight:600;padding:8px 14px;border-radius:100px;border:1px solid rgba(255,255,255,.1);background:rgba(0,0,0,.3);backdrop-filter:blur(8px)}
 
@@ -19,7 +19,7 @@
     .wish-text{font-size:1rem;font-weight:700;color:#c44dff}
 
     .game-container{flex:1;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden}
-    canvas{max-width:100%;max-height:100%;cursor:crosshair}
+    canvas{max-width:100%;max-height:100%;cursor:crosshair;touch-action:none}
 
     .toolbar{padding:16px;background:rgba(255,255,255,.04);border-top:1px solid rgba(255,255,255,.06);display:flex;justify-content:center;gap:10px;flex-shrink:0}
     .tool{width:56px;height:56px;border-radius:16px;border:2px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;position:relative}
@@ -61,19 +61,19 @@
   </div>
 
   <div class="toolbar">
-    <div class="tool active" id="tool-scissors" onclick="setTool('scissors')">
+    <div class="tool active" id="tool-scissors" onclick="setTool('scissors')" ontouchend="setTool('scissors')">
       <span class="icon">✂️</span>
       <span class="label">Scheri</span>
     </div>
-    <div class="tool" id="tool-trimmer" onclick="setTool('trimmer')">
+    <div class="tool" id="tool-trimmer" onclick="setTool('trimmer')" ontouchend="setTool('trimmer')">
       <span class="icon">🪒</span>
       <span class="label">Rasierer</span>
     </div>
-    <div class="tool" id="tool-tonic" onclick="setTool('tonic')">
+    <div class="tool" id="tool-tonic" onclick="setTool('tonic')" ontouchend="setTool('tonic')">
       <span class="icon">🧴</span>
       <span class="label">Wuchsmittel</span>
     </div>
-    <button class="finish-btn" onclick="finish()">Fertig! ✅</button>
+    <button class="finish-btn" onclick="finish()" ontouchend="finish()">Fertig! ✅</button>
   </div>
 
   <div class="overlay" id="overlay">
